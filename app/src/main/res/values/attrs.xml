@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="TouchpadView">
+        <!-- Mouse sensitivity multiplier (0.1 to 5.0) -->
+        <attr name="mouseSensitivity" format="float" />
+        
+        <!-- Scroll sensitivity multiplier (0.1 to 3.0) -->
+        <attr name="scrollSensitivity" format="float" />
+        
+        <!-- Enable/disable gestures -->
+        <attr name="enableGestures" format="boolean" />
+        
+        <!-- Left-handed mode support -->
+        <attr name="leftHandedMode" format="boolean" />
+        
+        <!-- Touch ripple effect -->
+        <attr name="enableRippleEffect" format="boolean" />
+        
+        <!-- Show cursor position indicator -->
+        <attr name="showCursorIndicator" format="boolean" />
+        
+        <!-- Touchpad background color -->
+        <attr name="touchpadBackground" format="color" />
+        
+        <!-- Touch area highlight color -->
+        <attr name="touchHighlightColor" format="color" />
+        
+        <!-- Ripple effect color -->
+        <attr name="rippleColor" format="color" />
+    </declare-styleable>
+</resources>
