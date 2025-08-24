@@ -419,13 +419,27 @@ class TouchpadViewModel @Inject constructor(
 
     // Connection management functions
     fun connect(ipAddress: String) {
+        addLogMessage("🔍 Connect called with IP: '$ipAddress'")
+        if (ipAddress.isBlank()) {
+            addLogMessage("❌ Cannot connect: IP address is empty")
+            return
+        }
+        connect(ipAddress, 8080) // Default port
+    }
+    
+    fun connect(ipAddress: String, port: Int) {
+        addLogMessage("🔍 Connect called with IP: '$ipAddress', Port: $port")
+        if (ipAddress.isBlank()) {
+            addLogMessage("❌ Cannot connect: IP address is empty")
+            return
+        }
         viewModelScope.launch {
-            addLogMessage("🔄 Connecting to $ipAddress...")
-            val success = webSocketManager.connect(ipAddress)
+            addLogMessage("🔄 Connecting to $ipAddress:$port...")
+            val success = webSocketManager.connect(ipAddress, port)
             if (success) {
-                addLogMessage("✅ Connected to $ipAddress")
+                addLogMessage("✅ Connected to $ipAddress:$port")
             } else {
-                addLogMessage("❌ Failed to connect to $ipAddress")
+                addLogMessage("❌ Failed to connect to $ipAddress:$port")
             }
         }
     }

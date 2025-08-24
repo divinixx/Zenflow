@@ -76,6 +76,13 @@ class KtorWebSocketManager @Inject constructor() {
     suspend fun connect(ipAddress: String, port: Int = 8080): Boolean {
         return withContext(Dispatchers.IO) {
             try {
+                // Validate IP address
+                if (ipAddress.isBlank()) {
+                    Log.e(TAG, "Cannot connect: IP address is empty")
+                    _connectionState.value = "Error: Empty IP address"
+                    return@withContext false
+                }
+                
                 disconnect() // Cleanup any existing connection
                 
                 _connectionState.value = "Connecting..."
