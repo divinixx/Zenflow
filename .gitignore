@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Hide Ktor icon file
+Ktor_icon.png
