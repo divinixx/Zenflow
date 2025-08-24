@@ -24,7 +24,6 @@ import androidx.navigation.NavController
 import com.divinixx.zenflow.ui.components.keyboard.SystemKeyboardView
 import com.divinixx.zenflow.ui.components.keyboard.VirtualKeyboardListener
 import com.divinixx.zenflow.ui.viewmodel.TouchpadViewModel
-import kotlinx.coroutines.delay
 
 /**
  * Keyboard Screen with virtual keyboard for remote PC control
@@ -188,7 +187,8 @@ private fun ConnectedKeyboardContent(
                     viewModel.sendKeyCombo(combination)
                 }
             },
-            isConnected = true
+            isConnected = true,
+            viewModel = viewModel
         )
         
         // Media Controls Section
@@ -279,7 +279,7 @@ private fun KeyboardSettingsSheet(
                 text = "• Use the text input field to open your device's keyboard\n" +
                       "• Type normally and tap 'Send Text' to send to PC\n" +
                       "• Use shortcut buttons for common key combinations\n" +
-                      "• Special keys are available for navigation and functions",
+                      "• Special keys are available for navigation and functions",  
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.LightGray,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -289,7 +289,6 @@ private fun KeyboardSettingsSheet(
         }
     }
 }
-
 @Composable
 private fun ResponsiveKeyboardButton(
     icon: ImageVector,
@@ -300,7 +299,7 @@ private fun ResponsiveKeyboardButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     var isPressed by remember { mutableStateOf(false) }
-    var pressStartTime by remember { mutableStateOf(0L) }
+    var pressStartTime by remember { mutableLongStateOf(0L) }
     
     // Track press state to handle continuous action vs single tap
     LaunchedEffect(interactionSource) {
@@ -370,6 +369,69 @@ private fun ResponsiveKeyboardButton(
 }
 
 @Composable
+private fun SimpleKeyboardButton(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    var isPressed by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    
+    // Simple immediate response button
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> {
+                    isPressed = true
+                    onClick() // Immediate response
+                }
+                is PressInteraction.Release -> {
+                    isPressed = false
+                }
+                is PressInteraction.Cancel -> {
+                    isPressed = false
+                }
+            }
+        }
+    }
+    
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    if (isPressed) Color(0xFF5d5d5d) else Color(0xFF3d3d3d),
+                    shape = androidx.compose.foundation.shape.CircleShape
+                )
+                .size(48.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            IconButton(
+                onClick = { /* Handled by interaction source */ },
+                interactionSource = interactionSource,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(4.dp))
+        
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (isPressed) Color.White else Color.Gray
+        )
+    }
+}
+
+@Composable
 private fun MediaControlsSection(
     viewModel: TouchpadViewModel
 ) {
@@ -394,23 +456,21 @@ private fun MediaControlsSection(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 ResponsiveKeyboardButton(
-                    icon = Icons.Default.VolumeDown,
+                    icon = Icons.AutoMirrored.Filled.VolumeDown,
                     label = "Vol-",
                     onStartAction = { viewModel.startVolumeDown() },
                     onStopAction = { viewModel.stopVolumeDown() },
                     onSingleTap = { viewModel.sendKeyCombo("volume_down") }
                 )
                 
-                ResponsiveKeyboardButton(
-                    icon = Icons.Default.VolumeOff,
+                SimpleKeyboardButton(
+                    icon = Icons.AutoMirrored.Filled.VolumeOff,
                     label = "Mute",
-                    onStartAction = { },
-                    onStopAction = { },
-                    onSingleTap = { viewModel.mediaMute() }
+                    onClick = { viewModel.mediaMute() }
                 )
                 
                 ResponsiveKeyboardButton(
-                    icon = Icons.Default.VolumeUp,
+                    icon = Icons.AutoMirrored.Filled.VolumeUp,
                     label = "Vol+",
                     onStartAction = { viewModel.startVolumeUp() },
                     onStopAction = { viewModel.stopVolumeUp() },
@@ -425,28 +485,22 @@ private fun MediaControlsSection(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                ResponsiveKeyboardButton(
+                SimpleKeyboardButton(
                     icon = Icons.Default.SkipPrevious,
                     label = "Previous",
-                    onStartAction = { },
-                    onStopAction = { },
-                    onSingleTap = { viewModel.mediaPrevious() }
+                    onClick = { viewModel.mediaPrevious() }
                 )
                 
-                ResponsiveKeyboardButton(
+                SimpleKeyboardButton(
                     icon = Icons.Default.PlayArrow,
                     label = "Play/Pause",
-                    onStartAction = { },
-                    onStopAction = { },
-                    onSingleTap = { viewModel.mediaPlayPause() }
+                    onClick = { viewModel.mediaPlayPause() }
                 )
                 
-                ResponsiveKeyboardButton(
+                SimpleKeyboardButton(
                     icon = Icons.Default.SkipNext,
                     label = "Next",
-                    onStartAction = { },
-                    onStopAction = { },
-                    onSingleTap = { viewModel.mediaNext() }
+                    onClick = { viewModel.mediaNext() }
                 )
             }
         }
@@ -502,7 +556,7 @@ private fun SpecialKeysSection(
                 )
                 
                 ResponsiveKeyboardButton(
-                    icon = Icons.Default.LastPage,
+                    icon = Icons.AutoMirrored.Filled.LastPage,
                     label = "End",
                     onStartAction = { viewModel.startKeyRepeat("END") },
                     onStopAction = { viewModel.stopKeyRepeat() },
@@ -542,7 +596,7 @@ private fun SpecialKeysSection(
                 )
                 
                 ResponsiveKeyboardButton(
-                    icon = Icons.Default.KeyboardReturn,
+                    icon = Icons.AutoMirrored.Filled.KeyboardReturn,
                     label = "Enter",
                     onStartAction = { viewModel.startKeyRepeat("ENTER") },
                     onStopAction = { viewModel.stopKeyRepeat() },
@@ -596,7 +650,7 @@ private fun QuickShortcutsSection(
                 )
                 
                 ResponsiveKeyboardButton(
-                    icon = Icons.Default.Undo,
+                    icon = Icons.AutoMirrored.Filled.Undo,
                     label = "Undo",
                     onStartAction = { viewModel.startShortcutRepeat("ctrl+z") },
                     onStopAction = { viewModel.stopKeyRepeat() },
@@ -604,7 +658,7 @@ private fun QuickShortcutsSection(
                 )
                 
                 ResponsiveKeyboardButton(
-                    icon = Icons.Default.Redo,
+                    icon = Icons.AutoMirrored.Filled.Redo,
                     label = "Redo",
                     onStartAction = { viewModel.startShortcutRepeat("ctrl+y") },
                     onStopAction = { viewModel.stopKeyRepeat() },

@@ -276,16 +276,19 @@ class TouchpadViewModel @Inject constructor(
 
     // Media playback controls (single press)
     fun mediaPlayPause() {
-        sendKeyCombo("media_play_pause")
+        addLogMessage("🎵 Media Play/Pause button pressed")
+        sendKeyCombo("media_play")
         addLogMessage("⏯️ Play/Pause toggled")
     }
 
     fun mediaNext() {
+        addLogMessage("🎵 Media Next button pressed")
         sendKeyCombo("media_next")
         addLogMessage("⏭️ Next track")
     }
 
     fun mediaPrevious() {
+        addLogMessage("🎵 Media Previous button pressed")
         sendKeyCombo("media_previous")
         addLogMessage("⏮️ Previous track")
     }
@@ -293,6 +296,24 @@ class TouchpadViewModel @Inject constructor(
     fun mediaMute() {
         sendKeyCombo("volume_mute")
         addLogMessage("🔇 Volume muted/unmuted")
+    }
+
+    // Backspace controls
+    fun startBackspaceRepeat() {
+        stopKeyRepeat()
+        keyRepeatJob = viewModelScope.launch {
+            addLogMessage("⌫ Backspace repeat started")
+            while (true) {
+                sendKeyboardInput("BACKSPACE", "press")
+                delay(100) // Moderate repeat rate for backspace
+            }
+        }
+    }
+
+    fun stopBackspaceRepeat() {
+        keyRepeatJob?.cancel()
+        keyRepeatJob = null
+        addLogMessage("⌫ Backspace repeat stopped")
     }
 
     // Continuous key pressing for special keys
@@ -435,6 +456,7 @@ class TouchpadViewModel @Inject constructor(
 
     // Keyboard functionality
     fun sendKeyboardInput(key: String, action: String) {
+        addLogMessage("⌨️ Sending keyboard input: $key ($action)")
         viewModelScope.launch {
             val keyboardData = mapOf(
                 "type" to "keyboard",
@@ -443,9 +465,12 @@ class TouchpadViewModel @Inject constructor(
                 "timestamp" to System.currentTimeMillis()
             )
             
+            addLogMessage("🔗 Keyboard message prepared: $keyboardData")
             try {
                 val success = webSocketManager.sendMessage(keyboardData)
-                if (!success) {
+                if (success) {
+                    addLogMessage("✅ Keyboard input sent successfully: $key ($action)")
+                } else {
                     addLogMessage("❌ Failed to send keyboard input: $key")
                 }
             } catch (e: Exception) {
@@ -477,6 +502,7 @@ class TouchpadViewModel @Inject constructor(
     }
 
     fun sendKeyCombo(combination: String) {
+        addLogMessage("📤 Attempting to send key combo: $combination")
         viewModelScope.launch {
             val comboData = mapOf(
                 "type" to "keyboard",
@@ -485,10 +511,11 @@ class TouchpadViewModel @Inject constructor(
                 "timestamp" to System.currentTimeMillis()
             )
             
+            addLogMessage("🔗 WebSocket message prepared: $comboData")
             try {
                 val success = webSocketManager.sendMessage(comboData)
                 if (success) {
-                    addLogMessage("🎹 Key combination sent: $combination")
+                    addLogMessage("✅ Key combination sent successfully: $combination")
                 } else {
                     addLogMessage("❌ Failed to send key combination: $combination")
                 }

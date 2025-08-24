@@ -250,7 +250,7 @@ object KeyboardLayouts {
      * Media control keys
      */
     val MEDIA_KEYS = listOf(
-        KeyDefinition("⏯️", "MEDIA_PLAY_PAUSE", keyType = KeyType.SPECIAL),
+        KeyDefinition("⏯️", "MEDIA_PLAY", keyType = KeyType.SPECIAL),
         KeyDefinition("⏮️", "MEDIA_PREVIOUS", keyType = KeyType.SPECIAL),
         KeyDefinition("⏭️", "MEDIA_NEXT", keyType = KeyType.SPECIAL),
         KeyDefinition("🔇", "VOLUME_MUTE", keyType = KeyType.SPECIAL),

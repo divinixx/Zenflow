@@ -1,6 +1,8 @@
 package com.divinixx.zenflow.ui.components.keyboard
 
 import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -24,6 +26,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 
 /**
  * System Keyboard Input Component
@@ -34,7 +37,8 @@ import androidx.compose.ui.unit.sp
 fun SystemKeyboardView(
     modifier: Modifier = Modifier,
     listener: VirtualKeyboardListener? = null,
-    isConnected: Boolean = false
+    isConnected: Boolean = false,
+    viewModel: com.divinixx.zenflow.ui.viewmodel.TouchpadViewModel? = null
 ) {
     var textInput by remember { mutableStateOf("") }
     var isKeyboardVisible by remember { mutableStateOf(false) }
@@ -89,6 +93,7 @@ fun SystemKeyboardView(
                     keyboardActions = KeyboardActions(
                         onDone = {
                             keyboardController?.hide()
+                            listener?.onKeyPressed("ENTER", false)
                         }
                     ),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -103,37 +108,25 @@ fun SystemKeyboardView(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Button(
-                        onClick = { 
+                    ResponsiveBackspaceButton(
+                        onStartPress = { 
+                            viewModel?.startBackspaceRepeat()
+                        },
+                        onStopPress = { 
+                            viewModel?.stopBackspaceRepeat()
+                        },
+                        onSingleTap = { 
                             if (isConnected) {
-                                listener?.onKeyPressed("BackSpace", false)
+                                listener?.onKeyPressed("BACKSPACE", false)
                             }
                             // Also remove last character from local text field
                             if (textInput.isNotEmpty()) {
                                 textInput = textInput.dropLast(1)
                             }
                         },
-                        enabled = isConnected,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF4a4a4a),
-                            disabledContainerColor = Color(0xFF2a2a2a)
-                        ),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Backspace,
-                            contentDescription = "Backspace",
-                            modifier = Modifier.size(20.dp),
-                            tint = Color.White
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Backspace",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
-                        )
-                    }
+                        isConnected = isConnected,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
                 
                 // Clear button (still useful for clearing the input field)
@@ -220,3 +213,77 @@ private val commonShortcuts = listOf(
     KeyboardShortcut("Alt+Tab", "alt+tab", Icons.AutoMirrored.Filled.KeyboardTab),
     KeyboardShortcut("Backspace", "backspace", Icons.AutoMirrored.Filled.Backspace)
 )
+
+/**
+ * Responsive Backspace Button with continuous press support
+ */
+@Composable
+private fun ResponsiveBackspaceButton(
+    onStartPress: () -> Unit,
+    onStopPress: () -> Unit,
+    onSingleTap: () -> Unit,
+    isConnected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    var isPressed by remember { mutableStateOf(false) }
+    var pressStartTime by remember { mutableStateOf(0L) }
+    
+    // Track press state for continuous vs single action
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> {
+                    isPressed = true
+                    pressStartTime = System.currentTimeMillis()
+                    delay(200) // Wait 200ms to determine if it's a long press
+                    if (isPressed) {
+                        onStartPress() // Start continuous press
+                    }
+                }
+                is PressInteraction.Release -> {
+                    val pressDuration = System.currentTimeMillis() - pressStartTime
+                    if (isPressed) {
+                        if (pressDuration < 200) {
+                            onSingleTap() // Quick tap
+                        } else {
+                            onStopPress() // Stop continuous press
+                        }
+                    }
+                    isPressed = false
+                }
+                is PressInteraction.Cancel -> {
+                    if (isPressed) {
+                        onStopPress()
+                    }
+                    isPressed = false
+                }
+            }
+        }
+    }
+    
+    Button(
+        onClick = { /* Handled by interaction source */ },
+        enabled = isConnected,
+        modifier = modifier,
+        interactionSource = interactionSource,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isPressed) Color(0xFF6a6a6a) else Color(0xFF4a4a4a),
+            disabledContainerColor = Color(0xFF2a2a2a)
+        ),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.Backspace,
+            contentDescription = "Backspace",
+            modifier = Modifier.size(20.dp),
+            tint = Color.White
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "Backspace",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White
+        )
+    }
+}
