@@ -9,6 +9,7 @@
 /.idea/assetWizardSettings.xml
 .DS_Store
 /build
+/ktor_icon.png
 /captures
 .externalNativeBuild
 .cxx
