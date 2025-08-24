@@ -749,8 +749,6 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 <td align="center"><img width="50" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/kotlin/kotlin-original.svg" alt="Kotlin"><br><strong>Kotlin</strong></td>
 <td align="center"><img width="50" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/android/android-original.svg" alt="Android"><br><strong>Android</strong></td>
 <td align="center"><img width="50" src="https://3.bp.blogspot.com/-VVp3WvJvl84/X0Vu6EjYqDI/AAAAAAAAPjU/ZOMKiUlgfg8ok8DY8Hc-ocOvGdB0z86AgCLcBGAsYHQ/s1600/jetpack%2Bcompose%2Bicon_RGB.png" alt="Compose"><br><strong>Compose</strong></td>
-<td align="center"><img width="50" src="https://ktor.io/images/ktor_logo.png" alt="Ktor"><br><strong>Ktor</strong></td>
-<td align="center"><img width="50" src="https://dagger.dev/favicon.ico" alt="Hilt"><br><strong>Hilt</strong></td>
 </tr>
 </table>
 
@@ -758,42 +756,8 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
 </div>
 
----
 
-### 💬 **What Developers Are Saying**
 
-<table>
-<tr>
-<td align="center" width="33%">
-  <img width="60" src="https://github.com/placeholder.png" alt="Developer 1"><br>
-  <strong>"Clean architecture that actually makes sense!"</strong><br>
-  <em>— @dev_enthusiast</em>
-</td>
-<td align="center" width="33%">
-  <img width="60" src="https://github.com/placeholder.png" alt="Developer 2"><br>
-  <strong>"Perfect example of modern Android dev"</strong><br>
-  <em>— @kotlin_lover</em>
-</td>
-<td align="center" width="33%">
-  <img width="60" src="https://github.com/placeholder.png" alt="Developer 3"><br>
-  <strong>"Learned so much from this codebase!"</strong><br>
-  <em>— @android_newbie</em>
-</td>
-</tr>
-</table>
-
----
-
-### 📬 **Stay Connected**
-
-<div align="center">
-
-[![Follow on GitHub](https://img.shields.io/badge/Follow-@divinixx-black?style=for-the-badge&logo=github)](https://github.com/divinixx)
-[![Email](https://img.shields.io/badge/Email-Contact_Me-blue?style=for-the-badge&logo=gmail)](mailto:your-email@example.com)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?style=for-the-badge&logo=linkedin)](https://linkedin.com/in/yourprofile)
-[![Twitter](https://img.shields.io/badge/Twitter-Follow-1da1f2?style=for-the-badge&logo=twitter)](https://twitter.com/yourhandle)
-
-</div>
 
 ---
 
@@ -809,6 +773,5 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
 <img src="https://img.shields.io/badge/2025-Zenflow_Remote-brightgreen?style=for-the-badge" alt="2025">
 <img src="https://img.shields.io/badge/Android-Made_for_Developers-green?style=for-the-badge&logo=android" alt="Android">
-<img src="https://img.shields.io/badge/Open_Source-MIT_License-blue?style=for-the-badge" alt="Open Source">
 
 </div>
