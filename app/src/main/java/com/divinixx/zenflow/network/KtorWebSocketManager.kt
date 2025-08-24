@@ -33,6 +33,10 @@ class KtorWebSocketManager @Inject constructor() {
     private var connectionJob: Job? = null
     private var pingJob: Job? = null
     
+    // Message throttling for smooth performance
+    private var lastMouseMessageTime: Long = 0L
+    private val mouseMessageThrottle: Long = 8L // ~125fps for mouse movement
+    
     // Connection state flows
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
@@ -153,11 +157,30 @@ class KtorWebSocketManager @Inject constructor() {
     }
     
     /**
+     * Optimized mouse movement sending with throttling
+     */
+    suspend fun sendMouseMessage(data: Map<String, Any>): Boolean {
+        val currentTime = System.currentTimeMillis()
+        
+        // Throttle mouse messages to prevent overwhelming the network
+        if (data["type"] == "mouse" && currentTime - lastMouseMessageTime < mouseMessageThrottle) {
+            return false // Skip this message
+        }
+        
+        lastMouseMessageTime = currentTime
+        return sendMessage(data)
+    }
+    
+    /**
      * Send message without waiting (fire and forget) - for high-frequency gestures
      */
     fun sendMessageAsync(data: Map<String, Any>, scope: CoroutineScope) {
         scope.launch {
-            sendMessage(data)
+            if (data["type"] == "mouse") {
+                sendMouseMessage(data)
+            } else {
+                sendMessage(data)
+            }
         }
     }
     

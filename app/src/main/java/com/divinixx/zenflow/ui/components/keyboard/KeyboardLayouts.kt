@@ -245,4 +245,30 @@ object KeyboardLayouts {
         KeyDefinition("Ins", "INSERT", keyType = KeyType.SPECIAL),
         KeyDefinition("Del", "DELETE", keyType = KeyType.DELETE)
     )
+
+    /**
+     * Media control keys
+     */
+    val MEDIA_KEYS = listOf(
+        KeyDefinition("⏯️", "MEDIA_PLAY_PAUSE", keyType = KeyType.SPECIAL),
+        KeyDefinition("⏮️", "MEDIA_PREVIOUS", keyType = KeyType.SPECIAL),
+        KeyDefinition("⏭️", "MEDIA_NEXT", keyType = KeyType.SPECIAL),
+        KeyDefinition("🔇", "VOLUME_MUTE", keyType = KeyType.SPECIAL),
+        KeyDefinition("🔉", "VOLUME_DOWN", keyType = KeyType.SPECIAL),
+        KeyDefinition("🔊", "VOLUME_UP", keyType = KeyType.SPECIAL)
+    )
+
+    /**
+     * Quick shortcut keys
+     */
+    val SHORTCUT_KEYS = listOf(
+        KeyDefinition("Ctrl+C", "CTRL_C", keyType = KeyType.SPECIAL),
+        KeyDefinition("Ctrl+V", "CTRL_V", keyType = KeyType.SPECIAL),
+        KeyDefinition("Ctrl+Z", "CTRL_Z", keyType = KeyType.SPECIAL),
+        KeyDefinition("Ctrl+Y", "CTRL_Y", keyType = KeyType.SPECIAL),
+        KeyDefinition("Alt+Tab", "ALT_TAB", keyType = KeyType.SPECIAL),
+        KeyDefinition("Ctrl+A", "CTRL_A", keyType = KeyType.SPECIAL),
+        KeyDefinition("Ctrl+S", "CTRL_S", keyType = KeyType.SPECIAL),
+        KeyDefinition("Ctrl+F", "CTRL_F", keyType = KeyType.SPECIAL)
+    )
 }

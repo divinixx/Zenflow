@@ -7,6 +7,8 @@ import com.divinixx.zenflow.ui.components.touchpad.TouchpadListener
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import javax.inject.Inject
 
 /**
@@ -27,7 +29,8 @@ data class TouchpadUiState(
     val isConnected: Boolean = false,
     val connectionState: String = "Disconnected",
     val touchpadSettings: TouchpadSettings = TouchpadSettings(),
-    val logMessages: List<String> = emptyList()
+    val logMessages: List<String> = emptyList(),
+    val errorMessage: String? = null
 )
 
 @HiltViewModel
@@ -38,6 +41,18 @@ class TouchpadViewModel @Inject constructor(
     // Private state flows
     private val _touchpadSettings = MutableStateFlow(TouchpadSettings())
     private val _logMessages = MutableStateFlow<List<String>>(emptyList())
+    
+    // Scroll jobs for continuous scrolling
+    private var scrollUpJob: Job? = null
+    private var scrollDownJob: Job? = null
+    
+    // Click jobs for continuous clicking
+    private var leftClickJob: Job? = null
+    private var rightClickJob: Job? = null
+    
+    // Keyboard jobs for continuous key pressing
+    private var keyRepeatJob: Job? = null
+    private var mediaControlJob: Job? = null
     
     // Combined UI state using combine operator for better performance
     val uiState: StateFlow<TouchpadUiState> = combine(
@@ -85,15 +100,16 @@ class TouchpadViewModel @Inject constructor(
             "deltaY" to adjustedDeltaY
         )
         
-        // Use async for high-frequency mouse movement (fire and forget)
-        webSocketManager.sendMessageAsync(
-            mapOf(
-                "type" to "mouse",
-                "action" to "move",
-                "data" to data
-            ),
-            viewModelScope
-        )
+        // Use optimized mouse message sending for smoother movement
+        viewModelScope.launch {
+            webSocketManager.sendMouseMessage(
+                mapOf(
+                    "type" to "mouse",
+                    "action" to "move",
+                    "data" to data
+                )
+            )
+        }
     }
 
     override fun onLeftClick(x: Float, y: Float) {
@@ -142,12 +158,200 @@ class TouchpadViewModel @Inject constructor(
         }
     }
 
-    // Settings management functions
-    fun updateSensitivity(sensitivity: Float) {
-        val currentSettings = _touchpadSettings.value
-        _touchpadSettings.value = currentSettings.copy(sensitivity = sensitivity)
-        addLogMessage("⚙️ Sensitivity updated: ${(sensitivity * 100).toInt()}%")
+    // Scroll functions for continuous scrolling
+    fun startScrollUp() {
+        stopAllScrolling() // Stop any existing scroll
+        scrollUpJob = viewModelScope.launch {
+            addLogMessage("⬆️ Scroll up started")
+            while (true) {
+                if (_touchpadSettings.value.enableScrolling) {
+                    sendMouseCommand("scroll", mapOf("deltaX" to 0.0, "deltaY" to -2.0))
+                }
+                delay(40) // Scroll every 40ms for smooth scrolling (25fps)
+            }
+        }
     }
+
+    fun startScrollDown() {
+        stopAllScrolling() // Stop any existing scroll
+        scrollDownJob = viewModelScope.launch {
+            addLogMessage("⬇️ Scroll down started")
+            while (true) {
+                if (_touchpadSettings.value.enableScrolling) {
+                    sendMouseCommand("scroll", mapOf("deltaX" to 0.0, "deltaY" to 2.0))
+                }
+                delay(40) // Scroll every 40ms for smooth scrolling (25fps)
+            }
+        }
+    }
+
+    fun stopScrollUp() {
+        scrollUpJob?.cancel()
+        scrollUpJob = null
+        addLogMessage("⬆️ Scroll up stopped")
+    }
+
+    fun stopScrollDown() {
+        scrollDownJob?.cancel()
+        scrollDownJob = null
+        addLogMessage("⬇️ Scroll down stopped")
+    }
+
+    // Continuous click functions
+    fun startLeftClick() {
+        stopAllClicking() // Stop any existing clicking
+        leftClickJob = viewModelScope.launch {
+            addLogMessage("🖱️ Continuous left click started")
+            while (true) {
+                sendMouseCommand("left_click", mapOf("x" to 0, "y" to 0))
+                delay(100) // Click every 100ms for rapid clicking
+            }
+        }
+    }
+
+    fun startRightClick() {
+        stopAllClicking() // Stop any existing clicking
+        if (_touchpadSettings.value.enableRightClick) {
+            rightClickJob = viewModelScope.launch {
+                addLogMessage("🖱️ Continuous right click started")
+                while (true) {
+                    sendMouseCommand("right_click", mapOf("x" to 0, "y" to 0))
+                    delay(100) // Click every 100ms for rapid clicking
+                }
+            }
+        }
+    }
+
+    fun stopLeftClick() {
+        leftClickJob?.cancel()
+        leftClickJob = null
+        addLogMessage("🖱️ Left click stopped")
+    }
+
+    fun stopRightClick() {
+        rightClickJob?.cancel()
+        rightClickJob = null
+        addLogMessage("🖱️ Right click stopped")
+    }
+
+    private fun stopAllClicking() {
+        leftClickJob?.cancel()
+        rightClickJob?.cancel()
+        leftClickJob = null
+        rightClickJob = null
+    }
+
+    // Media Control functions
+    fun startVolumeUp() {
+        stopMediaControls()
+        mediaControlJob = viewModelScope.launch {
+            addLogMessage("🔊 Volume up started")
+            while (true) {
+                sendKeyCombo("volume_up")
+                delay(150) // Volume change every 150ms
+            }
+        }
+    }
+
+    fun startVolumeDown() {
+        stopMediaControls()
+        mediaControlJob = viewModelScope.launch {
+            addLogMessage("🔉 Volume down started")
+            while (true) {
+                sendKeyCombo("volume_down")
+                delay(150) // Volume change every 150ms
+            }
+        }
+    }
+
+    fun stopVolumeUp() {
+        stopMediaControls()
+        addLogMessage("🔊 Volume up stopped")
+    }
+
+    fun stopVolumeDown() {
+        stopMediaControls()
+        addLogMessage("🔉 Volume down stopped")
+    }
+
+    // Media playback controls (single press)
+    fun mediaPlayPause() {
+        sendKeyCombo("media_play_pause")
+        addLogMessage("⏯️ Play/Pause toggled")
+    }
+
+    fun mediaNext() {
+        sendKeyCombo("media_next")
+        addLogMessage("⏭️ Next track")
+    }
+
+    fun mediaPrevious() {
+        sendKeyCombo("media_previous")
+        addLogMessage("⏮️ Previous track")
+    }
+
+    fun mediaMute() {
+        sendKeyCombo("volume_mute")
+        addLogMessage("🔇 Volume muted/unmuted")
+    }
+
+    // Continuous key pressing for special keys
+    fun startKeyRepeat(key: String) {
+        stopKeyRepeat()
+        keyRepeatJob = viewModelScope.launch {
+            addLogMessage("🔄 Key repeat started: $key")
+            while (true) {
+                sendKeyboardInput(key, "press")
+                delay(50) // Fast repeat rate for navigation keys
+            }
+        }
+    }
+
+    fun stopKeyRepeat() {
+        keyRepeatJob?.cancel()
+        keyRepeatJob = null
+        addLogMessage("🔄 Key repeat stopped")
+    }
+
+    // Continuous shortcut pressing
+    fun startShortcutRepeat(combination: String) {
+        stopKeyRepeat() // Stop any existing repeat
+        keyRepeatJob = viewModelScope.launch {
+            addLogMessage("🔄 Shortcut repeat started: $combination")
+            while (true) {
+                sendKeyCombo(combination)
+                delay(200) // Slower repeat for shortcuts
+            }
+        }
+    }
+
+    private fun stopMediaControls() {
+        mediaControlJob?.cancel()
+        mediaControlJob = null
+    }
+
+    private fun stopAllScrolling() {
+        scrollUpJob?.cancel()
+        scrollDownJob?.cancel()
+        scrollUpJob = null
+        scrollDownJob = null
+    }
+    
+    private fun stopAllActions() {
+        stopAllScrolling()
+        stopAllClicking()
+        stopKeyRepeat()
+        stopMediaControls()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopAllActions()
+        viewModelScope.launch {
+            webSocketManager.cleanup()
+        }
+    }
+    // Settings modification functions
 
     fun toggleScrolling(enabled: Boolean) {
         val currentSettings = _touchpadSettings.value
@@ -178,6 +382,18 @@ class TouchpadViewModel @Inject constructor(
             _logMessages.value = emptyList()
             addLogMessage("🗑️ Logs cleared")
         }
+    }
+
+    // Performance optimization functions
+    fun updateSensitivity(sensitivity: Float) {
+        val clampedSensitivity = sensitivity.coerceIn(0.1f, 5.0f)
+        _touchpadSettings.value = _touchpadSettings.value.copy(sensitivity = clampedSensitivity)
+        addLogMessage("🎯 Sensitivity updated to $clampedSensitivity")
+    }
+    
+    fun toggleHighPerformanceMode(enabled: Boolean) {
+        // This could be used to adjust various performance settings
+        addLogMessage("⚡ High performance mode: ${if (enabled) "ON" else "OFF"}")
     }
 
     // Connection management functions
@@ -314,13 +530,6 @@ class TouchpadViewModel @Inject constructor(
             if (_logMessages.value.size > 50) {
                 _logMessages.value = _logMessages.value.takeLast(50)
             }
-        }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        viewModelScope.launch {
-            webSocketManager.cleanup()
         }
     }
 }

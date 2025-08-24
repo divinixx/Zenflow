@@ -24,14 +24,16 @@ class TouchpadView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     companion object {
-        private const val MAX_FPS = 60
+        private const val MAX_FPS = 120  // Increased for smoother movement
         private const val MIN_FRAME_TIME = 1000L / MAX_FPS
+        private const val MIN_MOUSE_FRAME_TIME = 8L  // ~125fps for mouse movement
         private const val DOUBLE_TAP_TIMEOUT = 300L
         private const val LONG_PRESS_TIMEOUT = 500L
         private const val SCROLL_THRESHOLD = 10f
-        private const val MOVEMENT_THRESHOLD = 2f
+        private const val MOVEMENT_THRESHOLD = 1f  // Reduced for more responsiveness
         private const val MAX_VELOCITY = 50
-        private const val ACCELERATION_FACTOR = 1.5f
+        private const val ACCELERATION_FACTOR = 2.0f  // Increased for better acceleration
+        private const val SMOOTHING_FACTOR = 0.8f  // For movement smoothing
     }
 
     // Configuration attributes
@@ -51,11 +53,18 @@ class TouchpadView @JvmOverloads constructor(
     private var lastTouchX: Float = 0f
     private var lastTouchY: Float = 0f
     private var lastEventTime: Long = 0L
+    private var lastMouseEventTime: Long = 0L
     private var isFirstTouch: Boolean = true
     private var touchCount: Int = 0
     private var isScrolling: Boolean = false
     private var lastTapTime: Long = 0L
     private var tapCount: Int = 0
+
+    // Movement smoothing
+    private var smoothedDeltaX: Float = 0f
+    private var smoothedDeltaY: Float = 0f
+    private var lastVelocityX: Float = 0f
+    private var lastVelocityY: Float = 0f
 
     // Multi-touch tracking
     private val pointerPositions = mutableMapOf<Int, PointF>()
@@ -153,12 +162,28 @@ class TouchpadView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        // Performance optimization - limit to 60fps
         val currentTime = System.currentTimeMillis()
-        if (currentTime - lastFrameTime < MIN_FRAME_TIME) {
+        
+        // Different throttling for mouse movement vs visual updates
+        val isMouseMovement = event.actionMasked == MotionEvent.ACTION_MOVE && touchCount == 1
+        val minFrameTime = if (isMouseMovement) MIN_MOUSE_FRAME_TIME else MIN_FRAME_TIME
+        
+        if (isMouseMovement && currentTime - lastMouseEventTime < minFrameTime) {
+            // Still process movement but skip visual updates
+            if (touchCount == 1) {
+                handleSingleFingerMove(event, currentTime, skipVisualUpdate = true)
+            }
             return true
         }
+        
+        if (currentTime - lastFrameTime < minFrameTime && !isMouseMovement) {
+            return true
+        }
+        
         lastFrameTime = currentTime
+        if (isMouseMovement) {
+            lastMouseEventTime = currentTime
+        }
 
         // Let gesture detector handle the event first
         gestureDetector.onTouchEvent(event)
@@ -172,9 +197,11 @@ class TouchpadView @JvmOverloads constructor(
             MotionEvent.ACTION_CANCEL -> handleTouchCancel(event)
         }
 
-        // Update visual feedback
-        updateTouchCircles(event)
-        invalidate()
+        // Update visual feedback (skip if optimizing mouse movement)
+        if (!isMouseMovement || currentTime - lastFrameTime >= MIN_FRAME_TIME) {
+            updateTouchCircles(event)
+            invalidate()
+        }
 
         return true
     }
@@ -230,14 +257,14 @@ class TouchpadView @JvmOverloads constructor(
         val currentTime = System.currentTimeMillis()
         
         when (touchCount) {
-            1 -> handleSingleFingerMove(event, currentTime)
+            1 -> handleSingleFingerMove(event, currentTime, skipVisualUpdate = false)
             2 -> handleTwoFingerMove(event, currentTime)
         }
         
         lastEventTime = currentTime
     }
 
-    private fun handleSingleFingerMove(event: MotionEvent, currentTime: Long) {
+    private fun handleSingleFingerMove(event: MotionEvent, currentTime: Long, skipVisualUpdate: Boolean = false) {
         val currentX = event.x
         val currentY = event.y
         
@@ -251,21 +278,22 @@ class TouchpadView @JvmOverloads constructor(
             cancelLongPressAction()
         }
         
-        // Calculate mouse movement delta
-        val deltaX = currentX - lastTouchX
-        val deltaY = currentY - lastTouchY
+        // Calculate raw mouse movement delta
+        val rawDeltaX = currentX - lastTouchX
+        val rawDeltaY = currentY - lastTouchY
+        val timeDelta = currentTime - lastEventTime
         
-        // Apply sensitivity and acceleration
-        val acceleratedDelta = applyAcceleration(deltaX, deltaY, currentTime - lastEventTime)
+        // Apply smoothing to reduce jitter
+        val smoothedDelta = applySmoothingAndAcceleration(rawDeltaX, rawDeltaY, timeDelta)
         
-        // Send mouse movement
+        // Send mouse movement immediately for low latency
         touchpadListener?.onMove(
-            acceleratedDelta.x * mouseSensitivity,
-            acceleratedDelta.y * mouseSensitivity
+            smoothedDelta.x * mouseSensitivity,
+            smoothedDelta.y * mouseSensitivity
         )
         
-        // Update cursor position
-        if (showCursorIndicator) {
+        // Update cursor position for visual feedback
+        if (showCursorIndicator && !skipVisualUpdate) {
             cursorX = currentX
             cursorY = currentY
         }
@@ -417,6 +445,35 @@ class TouchpadView @JvmOverloads constructor(
         }
     }
 
+    private fun applySmoothingAndAcceleration(deltaX: Float, deltaY: Float, timeDelta: Long): PointF {
+        // Calculate velocity
+        val timeSeconds = (timeDelta.coerceAtLeast(1L)) / 1000f
+        val velocityX = deltaX / timeSeconds
+        val velocityY = deltaY / timeSeconds
+        
+        // Apply exponential smoothing to reduce jitter
+        smoothedDeltaX = SMOOTHING_FACTOR * smoothedDeltaX + (1 - SMOOTHING_FACTOR) * deltaX
+        smoothedDeltaY = SMOOTHING_FACTOR * smoothedDeltaY + (1 - SMOOTHING_FACTOR) * deltaY
+        
+        // Calculate speed for acceleration
+        val speed = sqrt(velocityX.pow(2) + velocityY.pow(2))
+        
+        // Apply dynamic acceleration based on speed
+        val acceleration = when {
+            speed < 10f -> 0.5f  // Slow movement - precision mode
+            speed < 50f -> 1.0f  // Normal movement
+            speed < 200f -> 2.0f // Fast movement - acceleration
+            else -> 3.0f         // Very fast movement - maximum acceleration
+        }
+        
+        // Apply acceleration to smoothed deltas
+        return PointF(
+            smoothedDeltaX * acceleration,
+            smoothedDeltaY * acceleration
+        )
+    }
+
+    // Keep the old function for compatibility
     private fun applyAcceleration(deltaX: Float, deltaY: Float, timeDelta: Long): PointF {
         val velocity = sqrt(deltaX.pow(2) + deltaY.pow(2)) / (timeDelta + 1)
         val acceleration = min(1f + velocity * ACCELERATION_FACTOR, MAX_VELOCITY.toFloat())

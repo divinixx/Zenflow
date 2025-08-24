@@ -98,6 +98,44 @@ fun SystemKeyboardView(
                     )
                 )
                 
+                // Backspace Button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { 
+                            if (isConnected) {
+                                listener?.onKeyPressed("BackSpace", false)
+                            }
+                            // Also remove last character from local text field
+                            if (textInput.isNotEmpty()) {
+                                textInput = textInput.dropLast(1)
+                            }
+                        },
+                        enabled = isConnected,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF4a4a4a),
+                            disabledContainerColor = Color(0xFF2a2a2a)
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Backspace,
+                            contentDescription = "Backspace",
+                            modifier = Modifier.size(20.dp),
+                            tint = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Backspace",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White
+                        )
+                    }
+                }
+                
                 // Clear button (still useful for clearing the input field)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -118,118 +156,6 @@ fun SystemKeyboardView(
             }
         }
         
-        // Quick Shortcuts Section
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF2d2d2d)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "Quick Shortcuts",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                
-                // Common shortcuts - more responsive layout
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 120.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp) // Fixed height to work with parent scroll
-                ) {
-                    items(commonShortcuts.size) { index ->
-                        val shortcut = commonShortcuts[index]
-                        ShortcutButton(
-                            shortcut = shortcut,
-                            enabled = isConnected,
-                            onClick = { listener?.onKeyCombo(shortcut.combo) }
-                        )
-                    }
-                }
-            }
-        }
-        
-        // Media Controls Section
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF2d2d2d)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "Media Controls",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                
-                // Media control buttons
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 110.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(160.dp) // Fixed height to work with parent scroll
-                ) {
-                    items(mediaControls.size) { index ->
-                        val mediaControl = mediaControls[index]
-                        ShortcutButton(
-                            shortcut = mediaControl,
-                            enabled = isConnected,
-                            onClick = { listener?.onKeyCombo(mediaControl.combo) }
-                        )
-                    }
-                }
-            }
-        }
-        
-        // Special Keys Section
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF2d2d2d)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "Special Keys",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 90.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp) // Fixed height to work with parent scroll
-                ) {
-                    items(specialKeys.size) { index ->
-                        val key = specialKeys[index]
-                        SpecialKeyButton(
-                            key = key,
-                            enabled = isConnected,
-                            onClick = { listener?.onKeyPressed(key.keyCode) }
-                        )
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -277,46 +203,10 @@ private fun ShortcutButton(
     }
 }
 
-@Composable
-private fun SpecialKeyButton(
-    key: SpecialKey,
-    enabled: Boolean,
-    onClick: () -> Unit
-) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp), // Increased height for better visibility
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF505050), // Lighter color for better visibility
-            disabledContainerColor = Color(0xFF2a2a2a)
-        ),
-        shape = RoundedCornerShape(8.dp), // More rounded corners
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 4.dp,
-            pressedElevation = 8.dp
-        )
-    ) {
-        Text(
-            text = key.label,
-            fontSize = 14.sp, // Increased font size
-            fontWeight = FontWeight.Medium,
-            color = if (enabled) Color.White else Color.Gray
-        )
-    }
-}
-
 data class KeyboardShortcut(
     val label: String,
     val combo: String,
     val icon: ImageVector
-)
-
-data class SpecialKey(
-    val label: String,
-    val keyCode: String
 )
 
 private val commonShortcuts = listOf(
@@ -329,25 +219,4 @@ private val commonShortcuts = listOf(
     // Navigation
     KeyboardShortcut("Alt+Tab", "alt+tab", Icons.AutoMirrored.Filled.KeyboardTab),
     KeyboardShortcut("Backspace", "backspace", Icons.AutoMirrored.Filled.Backspace)
-)
-
-private val mediaControls = listOf(
-    KeyboardShortcut("Play/Pause", "media_play_pause", Icons.Default.PlayArrow),
-    KeyboardShortcut("Next Track", "media_next", Icons.Default.SkipNext),
-    KeyboardShortcut("Previous", "media_previous", Icons.Default.SkipPrevious),
-    KeyboardShortcut("Volume Up", "volume_up", Icons.AutoMirrored.Filled.VolumeUp),
-    KeyboardShortcut("Volume Down", "volume_down", Icons.AutoMirrored.Filled.VolumeDown),
-    KeyboardShortcut("Mute", "volume_mute", Icons.AutoMirrored.Filled.VolumeOff)
-)
-
-private val specialKeys = listOf(
-    SpecialKey("Enter", "ENTER"),
-    SpecialKey("Tab", "TAB"),
-    SpecialKey("Escape", "ESCAPE"),
-    SpecialKey("Delete", "DELETE"),
-    SpecialKey("Space", "SPACE"),
-    SpecialKey("Home", "HOME"),
-    SpecialKey("End", "END"),
-    SpecialKey("Page Up", "PAGE_UP"),
-    SpecialKey("Page Down", "PAGE_DOWN")
 )

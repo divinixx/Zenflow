@@ -4,6 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
@@ -12,12 +15,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import kotlinx.coroutines.delay
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -256,22 +262,34 @@ private fun QuickActionsRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        QuickActionButton(
+        ResponsiveActionButton(
             icon = Icons.Default.Mouse,
             label = "Left Click",
-            onClick = { viewModel.performLeftClick() }
+            onStartAction = { viewModel.startLeftClick() },
+            onStopAction = { viewModel.stopLeftClick() }
         )
         
-        QuickActionButton(
+        // Scroll Up Button
+        ResponsiveActionButton(
+            icon = Icons.Default.KeyboardArrowUp,
+            label = "Scroll Up",
+            onStartAction = { viewModel.startScrollUp() },
+            onStopAction = { viewModel.stopScrollUp() }
+        )
+        
+        // Scroll Down Button  
+        ResponsiveActionButton(
+            icon = Icons.Default.KeyboardArrowDown,
+            label = "Scroll Down",
+            onStartAction = { viewModel.startScrollDown() },
+            onStopAction = { viewModel.stopScrollDown() }
+        )
+        
+        ResponsiveActionButton(
             icon = Icons.Default.TouchApp,
             label = "Right Click",
-            onClick = { viewModel.performRightClick() }
-        )
-        
-        QuickActionButton(
-            icon = Icons.Default.DoubleArrow,
-            label = "Double Click",
-            onClick = { viewModel.performDoubleClick() }
+            onStartAction = { viewModel.startRightClick() },
+            onStopAction = { viewModel.stopRightClick() }
         )
     }
 }
@@ -305,6 +323,72 @@ private fun QuickActionButton(
             text = label,
             style = MaterialTheme.typography.bodySmall,
             color = Color.Gray
+        )
+    }
+}
+
+@Composable
+private fun ResponsiveActionButton(
+    icon: ImageVector,
+    label: String,
+    onStartAction: () -> Unit,
+    onStopAction: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    var isPressed by remember { mutableStateOf(false) }
+    
+    // Track press state to handle continuous action
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> {
+                    isPressed = true
+                    onStartAction()
+                }
+                is PressInteraction.Release -> {
+                    isPressed = false
+                    onStopAction()
+                }
+                is PressInteraction.Cancel -> {
+                    isPressed = false
+                    onStopAction()
+                }
+            }
+        }
+    }
+    
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    if (isPressed) Color(0xFF5d5d5d) else Color(0xFF3d3d3d),
+                    shape = androidx.compose.foundation.shape.CircleShape
+                )
+                .size(48.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            IconButton(
+                onClick = { /* Handled by interaction source */ },
+                interactionSource = interactionSource,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(4.dp))
+        
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (isPressed) Color.White else Color.Gray
         )
     }
 }
