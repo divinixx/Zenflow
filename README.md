@@ -763,7 +763,7 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
 <div align="center">
 
-### 🎯 **Made with ❤️ by [@divinixx](https://github.com/divinixx)**
+### 🎯 **Made with ❤️ by [@divinixx](https://github.com/divinixx) in India**
 
 **Zenflow Remote** • Powered by **Kotlin** & **Jetpack Compose** • **MIT License**
 
