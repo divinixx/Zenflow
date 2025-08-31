@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -36,7 +37,7 @@ fun KeyboardScreen(
 ) {
     // Single UI state collection for optimal performance
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    
+
     // Local state for UI controls
     var showSettings by remember { mutableStateOf(false) }
     var showLogs by remember { mutableStateOf(false) }
@@ -44,7 +45,16 @@ fun KeyboardScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1a1a1a))
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.background,
+                        MaterialTheme.colorScheme.surface,
+                        MaterialTheme.colorScheme.surfaceContainer,
+                        MaterialTheme.colorScheme.surfaceContainerHigh
+                    )
+                )
+            )
     ) {
         // Header Section - Fixed at top
         KeyboardHeader(
@@ -54,7 +64,7 @@ fun KeyboardScreen(
             onShowLogs = { showLogs = true },
             modifier = Modifier.padding(16.dp)
         )
-        
+
         // Main Content - Scrollable
         Column(
             modifier = Modifier
@@ -77,14 +87,14 @@ fun KeyboardScreen(
             }
         }
     }
-    
+
     // Settings Bottom Sheet
     if (showSettings) {
         KeyboardSettingsSheet(
             onDismiss = { showSettings = false }
         )
     }
-    
+
     // Logs Bottom Sheet
     if (showLogs) {
         LogsBottomSheet(
@@ -115,7 +125,7 @@ private fun KeyboardHeader(
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
-            
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -133,7 +143,7 @@ private fun KeyboardHeader(
                 )
             }
         }
-        
+
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -144,7 +154,7 @@ private fun KeyboardHeader(
                     tint = Color.White
                 )
             }
-            
+
             IconButton(onClick = onShowSettings) {
                 Icon(
                     imageVector = Icons.Default.Settings,
@@ -170,19 +180,19 @@ private fun ConnectedKeyboardContent(
                 override fun onKeyPressed(key: String, isModifier: Boolean) {
                     viewModel.sendKeyboardInput(key, "press")
                 }
-                
+
                 override fun onKeyReleased(key: String, isModifier: Boolean) {
                     viewModel.sendKeyboardInput(key, "release")
                 }
-                
+
                 override fun onTextInput(text: String) {
                     viewModel.sendTextInput(text)
                 }
-                
+
                 override fun onModifierChanged(modifier: String, pressed: Boolean) {
                     // Modifier state is handled internally by SystemKeyboardView
                 }
-                
+
                 override fun onKeyCombo(combination: String) {
                     viewModel.sendKeyCombo(combination)
                 }
@@ -190,13 +200,13 @@ private fun ConnectedKeyboardContent(
             isConnected = true,
             viewModel = viewModel
         )
-        
+
         // Media Controls Section
         MediaControlsSection(viewModel = viewModel)
-        
+
         // Special Keys Section
         SpecialKeysSection(viewModel = viewModel)
-        
+
         // Quick Shortcuts Section
         QuickShortcutsSection(viewModel = viewModel)
     }
@@ -217,18 +227,18 @@ private fun DisconnectedContent(
             modifier = Modifier.size(64.dp),
             tint = Color.Gray
         )
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         Text(
             text = "Connect to PC to use keyboard",
             style = MaterialTheme.typography.headlineSmall,
             color = Color.Gray,
             textAlign = TextAlign.Center
         )
-        
+
         Spacer(modifier = Modifier.height(24.dp))
-        
+
         Button(
             onClick = onNavigateToConnection,
             colors = ButtonDefaults.buttonColors(
@@ -267,24 +277,24 @@ private fun KeyboardSettingsSheet(
                 color = Color.White,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
-            
+
             Text(
                 text = "System Keyboard Integration",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-            
+
             Text(
                 text = "• Use the text input field to open your device's keyboard\n" +
-                      "• Type normally and tap 'Send Text' to send to PC\n" +
-                      "• Use shortcut buttons for common key combinations\n" +
-                      "• Special keys are available for navigation and functions",  
+                        "• Type normally and tap 'Send Text' to send to PC\n" +
+                        "• Use shortcut buttons for common key combinations\n" +
+                        "• Special keys are available for navigation and functions",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.LightGray,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
@@ -300,7 +310,7 @@ private fun ResponsiveKeyboardButton(
     val interactionSource = remember { MutableInteractionSource() }
     var isPressed by remember { mutableStateOf(false) }
     var pressStartTime by remember { mutableLongStateOf(0L) }
-    
+
     // Track press state to handle continuous action vs single tap
     LaunchedEffect(interactionSource) {
         interactionSource.interactions.collect { interaction ->
@@ -331,7 +341,7 @@ private fun ResponsiveKeyboardButton(
             }
         }
     }
-    
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -357,9 +367,9 @@ private fun ResponsiveKeyboardButton(
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.height(4.dp))
-        
+
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
@@ -376,7 +386,7 @@ private fun SimpleKeyboardButton(
 ) {
     var isPressed by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
-    
+
     // Simple immediate response button
     LaunchedEffect(interactionSource) {
         interactionSource.interactions.collect { interaction ->
@@ -394,7 +404,7 @@ private fun SimpleKeyboardButton(
             }
         }
     }
-    
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -420,9 +430,9 @@ private fun SimpleKeyboardButton(
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.height(4.dp))
-        
+
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
@@ -449,7 +459,7 @@ private fun MediaControlsSection(
                 color = Color.White,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
-            
+
             // Volume Controls (Press and hold)
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -462,13 +472,13 @@ private fun MediaControlsSection(
                     onStopAction = { viewModel.stopVolumeDown() },
                     onSingleTap = { viewModel.sendKeyCombo("volume_down") }
                 )
-                
+
                 SimpleKeyboardButton(
                     icon = Icons.AutoMirrored.Filled.VolumeOff,
                     label = "Mute",
                     onClick = { viewModel.mediaMute() }
                 )
-                
+
                 ResponsiveKeyboardButton(
                     icon = Icons.AutoMirrored.Filled.VolumeUp,
                     label = "Vol+",
@@ -477,9 +487,9 @@ private fun MediaControlsSection(
                     onSingleTap = { viewModel.sendKeyCombo("volume_up") }
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             // Playback Controls (Single tap)
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -490,13 +500,13 @@ private fun MediaControlsSection(
                     label = "Previous",
                     onClick = { viewModel.mediaPrevious() }
                 )
-                
+
                 SimpleKeyboardButton(
                     icon = Icons.Default.PlayArrow,
                     label = "Play/Pause",
                     onClick = { viewModel.mediaPlayPause() }
                 )
-                
+
                 SimpleKeyboardButton(
                     icon = Icons.Default.SkipNext,
                     label = "Next",
@@ -525,7 +535,7 @@ private fun SpecialKeysSection(
                 color = Color.White,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
-            
+
             // Navigation Keys
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -538,7 +548,7 @@ private fun SpecialKeysSection(
                     onStopAction = { viewModel.stopKeyRepeat() },
                     onSingleTap = { viewModel.sendKeyboardInput("HOME", "press") }
                 )
-                
+
                 ResponsiveKeyboardButton(
                     icon = Icons.Default.KeyboardArrowUp,
                     label = "Page Up",
@@ -546,7 +556,7 @@ private fun SpecialKeysSection(
                     onStopAction = { viewModel.stopKeyRepeat() },
                     onSingleTap = { viewModel.sendKeyboardInput("PAGE_UP", "press") }
                 )
-                
+
                 ResponsiveKeyboardButton(
                     icon = Icons.Default.KeyboardArrowDown,
                     label = "Page Dn",
@@ -554,7 +564,7 @@ private fun SpecialKeysSection(
                     onStopAction = { viewModel.stopKeyRepeat() },
                     onSingleTap = { viewModel.sendKeyboardInput("PAGE_DOWN", "press") }
                 )
-                
+
                 ResponsiveKeyboardButton(
                     icon = Icons.AutoMirrored.Filled.LastPage,
                     label = "End",
@@ -563,9 +573,9 @@ private fun SpecialKeysSection(
                     onSingleTap = { viewModel.sendKeyboardInput("END", "press") }
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             // Function Keys
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -578,7 +588,7 @@ private fun SpecialKeysSection(
                     onStopAction = { viewModel.stopKeyRepeat() },
                     onSingleTap = { viewModel.sendKeyboardInput("ESCAPE", "press") }
                 )
-                
+
                 ResponsiveKeyboardButton(
                     icon = Icons.Default.Delete,
                     label = "Del",
@@ -586,7 +596,7 @@ private fun SpecialKeysSection(
                     onStopAction = { viewModel.stopKeyRepeat() },
                     onSingleTap = { viewModel.sendKeyboardInput("DELETE", "press") }
                 )
-                
+
                 ResponsiveKeyboardButton(
                     icon = Icons.Default.Tab,
                     label = "Tab",
@@ -594,7 +604,7 @@ private fun SpecialKeysSection(
                     onStopAction = { viewModel.stopKeyRepeat() },
                     onSingleTap = { viewModel.sendKeyboardInput("TAB", "press") }
                 )
-                
+
                 ResponsiveKeyboardButton(
                     icon = Icons.AutoMirrored.Filled.KeyboardReturn,
                     label = "Enter",
@@ -625,7 +635,7 @@ private fun QuickShortcutsSection(
                 color = Color.White,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
-            
+
             // First row - Basic shortcuts
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -640,7 +650,7 @@ private fun QuickShortcutsSection(
                     onStopAction = { viewModel.stopKeyRepeat() },
                     onSingleTap = { viewModel.sendKeyCombo("ctrl+c") }
                 )
-                
+
                 ResponsiveKeyboardButton(
                     icon = Icons.Default.ContentPaste,
                     label = "Paste",
@@ -648,7 +658,7 @@ private fun QuickShortcutsSection(
                     onStopAction = { viewModel.stopKeyRepeat() },
                     onSingleTap = { viewModel.sendKeyCombo("ctrl+v") }
                 )
-                
+
                 ResponsiveKeyboardButton(
                     icon = Icons.AutoMirrored.Filled.Undo,
                     label = "Undo",
@@ -656,7 +666,7 @@ private fun QuickShortcutsSection(
                     onStopAction = { viewModel.stopKeyRepeat() },
                     onSingleTap = { viewModel.sendKeyCombo("ctrl+z") }
                 )
-                
+
                 ResponsiveKeyboardButton(
                     icon = Icons.AutoMirrored.Filled.Redo,
                     label = "Redo",
@@ -665,9 +675,9 @@ private fun QuickShortcutsSection(
                     onSingleTap = { viewModel.sendKeyCombo("ctrl+y") }
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             // Second row - System shortcuts
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -680,7 +690,7 @@ private fun QuickShortcutsSection(
                     onStopAction = { viewModel.stopKeyRepeat() },
                     onSingleTap = { viewModel.sendKeyCombo("alt+tab") }
                 )
-                
+
                 ResponsiveKeyboardButton(
                     icon = Icons.Default.FindReplace,
                     label = "Find",
@@ -688,7 +698,7 @@ private fun QuickShortcutsSection(
                     onStopAction = { viewModel.stopKeyRepeat() },
                     onSingleTap = { viewModel.sendKeyCombo("ctrl+f") }
                 )
-                
+
                 ResponsiveKeyboardButton(
                     icon = Icons.Default.SelectAll,
                     label = "Select All",
@@ -696,7 +706,7 @@ private fun QuickShortcutsSection(
                     onStopAction = { viewModel.stopKeyRepeat() },
                     onSingleTap = { viewModel.sendKeyCombo("ctrl+a") }
                 )
-                
+
                 ResponsiveKeyboardButton(
                     icon = Icons.Default.Save,
                     label = "Save",
@@ -737,14 +747,14 @@ private fun LogsBottomSheet(
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-                
+
                 TextButton(onClick = onClearLogs) {
                     Text("Clear", color = Color.Red)
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -758,7 +768,7 @@ private fun LogsBottomSheet(
                         modifier = Modifier.padding(vertical = 2.dp)
                     )
                 }
-                
+
                 if (logs.isEmpty()) {
                     Text(
                         text = "No logs available",

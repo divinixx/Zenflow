@@ -112,6 +112,9 @@ dependencies {
     implementation(libs.composeIcons.fontAwesome)
     implementation(libs.material.icons.core)
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
+    implementation("androidx.compose.material3:material3:1.3.2")
+    implementation("androidx.compose.material3:material3-window-size-class:1.3.2")
+    implementation("androidx.compose.material3:material3-adaptive-navigation-suite:1.5.0-alpha02")
 
     // WebSocket and JSON - Using Ktor for better Kotlin coroutines support
     implementation("io.ktor:ktor-client-core:3.2.3")

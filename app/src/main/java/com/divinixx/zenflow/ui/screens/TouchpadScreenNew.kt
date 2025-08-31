@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -44,7 +45,7 @@ fun TouchpadScreen(
 ) {
     // Single UI state collection for optimal performance
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    
+
     // Local state for UI controls
     var showSettings by remember { mutableStateOf(false) }
     var showLogs by remember { mutableStateOf(false) }
@@ -52,7 +53,16 @@ fun TouchpadScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1a1a1a))
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.background,
+                        MaterialTheme.colorScheme.surface,
+                        MaterialTheme.colorScheme.surfaceContainer,
+                        MaterialTheme.colorScheme.surfaceContainerHigh
+                    )
+                )
+            )
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -63,7 +73,7 @@ fun TouchpadScreen(
             onShowSettings = { showSettings = true },
             onShowLogs = { showLogs = true }
         )
-        
+
         // Main Content based on connection state
         if (uiState.isConnected) {
             ConnectedContent(
@@ -78,7 +88,7 @@ fun TouchpadScreen(
             )
         }
     }
-    
+
     // Settings Bottom Sheet
     if (showSettings) {
         TouchpadSettingsSheet(
@@ -91,7 +101,7 @@ fun TouchpadScreen(
             onToggleLeftHanded = viewModel::toggleLeftHanded
         )
     }
-    
+
     // Logs Bottom Sheet
     if (showLogs) {
         LogsBottomSheet(
@@ -121,7 +131,7 @@ private fun TouchpadHeader(
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
-            
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -139,7 +149,7 @@ private fun TouchpadHeader(
                 )
             }
         }
-        
+
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -150,7 +160,7 @@ private fun TouchpadHeader(
                     tint = Color.White
                 )
             }
-            
+
             IconButton(onClick = onShowSettings) {
                 Icon(
                     imageVector = Icons.Default.Settings,
@@ -202,10 +212,10 @@ private fun ConnectedContent(
                 )
             }
         }
-        
+
         // Quick Actions
         QuickActionsRow(viewModel = viewModel)
-        
+
         // Status Bar
         TouchpadStatusBar(settings = settings)
     }
@@ -226,18 +236,18 @@ private fun DisconnectedContent(
             modifier = Modifier.size(64.dp),
             tint = Color.Gray
         )
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         Text(
             text = "Connect to PC to use touchpad",
             style = MaterialTheme.typography.headlineSmall,
             color = Color.Gray,
             textAlign = TextAlign.Center
         )
-        
+
         Spacer(modifier = Modifier.height(24.dp))
-        
+
         Button(
             onClick = onNavigateToConnection,
             colors = ButtonDefaults.buttonColors(
@@ -268,7 +278,7 @@ private fun QuickActionsRow(
             onStartAction = { viewModel.startLeftClick() },
             onStopAction = { viewModel.stopLeftClick() }
         )
-        
+
         // Scroll Up Button
         ResponsiveActionButton(
             icon = Icons.Default.KeyboardArrowUp,
@@ -276,7 +286,7 @@ private fun QuickActionsRow(
             onStartAction = { viewModel.startScrollUp() },
             onStopAction = { viewModel.stopScrollUp() }
         )
-        
+
         // Scroll Down Button  
         ResponsiveActionButton(
             icon = Icons.Default.KeyboardArrowDown,
@@ -284,7 +294,7 @@ private fun QuickActionsRow(
             onStartAction = { viewModel.startScrollDown() },
             onStopAction = { viewModel.stopScrollDown() }
         )
-        
+
         ResponsiveActionButton(
             icon = Icons.Default.TouchApp,
             label = "Right Click",
@@ -318,7 +328,7 @@ private fun QuickActionButton(
                 tint = Color.White
             )
         }
-        
+
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
@@ -336,7 +346,7 @@ private fun ResponsiveActionButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     var isPressed by remember { mutableStateOf(false) }
-    
+
     // Track press state to handle continuous action
     LaunchedEffect(interactionSource) {
         interactionSource.interactions.collect { interaction ->
@@ -356,7 +366,7 @@ private fun ResponsiveActionButton(
             }
         }
     }
-    
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -382,9 +392,9 @@ private fun ResponsiveActionButton(
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.height(4.dp))
-        
+
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
@@ -469,7 +479,7 @@ private fun TouchpadSettingsSheet(
                 color = Color.White,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
-            
+
             // Sensitivity Slider
             Text(
                 text = "Sensitivity: ${(settings.sensitivity * 100).toInt()}%",
@@ -482,32 +492,32 @@ private fun TouchpadSettingsSheet(
                 valueRange = 0.1f..2.0f,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
-            
+
             // Toggle Settings
             SettingToggle(
                 title = "Enable Scrolling",
                 checked = settings.enableScrolling,
                 onCheckedChange = onToggleScrolling
             )
-            
+
             SettingToggle(
                 title = "Enable Right Click",
                 checked = settings.enableRightClick,
                 onCheckedChange = onToggleRightClick
             )
-            
+
             SettingToggle(
                 title = "Enable Double Click",
                 checked = settings.enableDoubleClick,
                 onCheckedChange = onToggleDoubleClick
             )
-            
+
             SettingToggle(
                 title = "Left-handed Mode",
                 checked = settings.leftHandedMode,
                 onCheckedChange = onToggleLeftHanded
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
@@ -566,14 +576,14 @@ private fun LogsBottomSheet(
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-                
+
                 TextButton(onClick = onClearLogs) {
                     Text("Clear", color = Color.Red)
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -587,7 +597,7 @@ private fun LogsBottomSheet(
                         modifier = Modifier.padding(vertical = 2.dp)
                     )
                 }
-                
+
                 if (logs.isEmpty()) {
                     Text(
                         text = "No logs available",

@@ -3,9 +3,14 @@ package com.divinixx.zenflow.network
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -31,20 +36,19 @@ class NetworkDiscoveryManager @Inject constructor(
         context.getSystemService(Context.NSD_SERVICE) as NsdManager
     }
     
-    // Service type for Zenflow WebSocket servers - try multiple variations
+    // Service type for Zenflow WebSocket servers - specific types only
     private val serviceTypes = listOf(
         "_zenflow-ws._tcp",
         "_zenflow-ws._tcp.",
         "_zenflow-ws._tcp.local.",
         "_zenflow._tcp",
         "_zenflow._tcp.",
-        "_zenflow._tcp.local.",
-        "_http._tcp",
-        "_http._tcp."
+        "_zenflow._tcp.local."
     )
     
     // Current service type being discovered
     private var currentServiceTypeIndex = 0
+
     
     // StateFlow for discovered services
     private val _discoveredServices = MutableStateFlow<List<DiscoveredService>>(emptyList())
@@ -58,20 +62,23 @@ class NetworkDiscoveryManager @Inject constructor(
     private val pendingResolutions = mutableMapOf<String, NsdServiceInfo>()
     
     private var discoveryListener: NsdManager.DiscoveryListener? = null
+    private val coroutineScope = CoroutineScope(Dispatchers.Main)
+    
+    private companion object {
+        const val TAG = "NetworkDiscoveryManager"
+    }
     
     /**
      * Start discovering Zenflow services on the network
      * Try multiple service types to find services
      */
     fun startDiscovery() {
-        if (_isDiscovering.value) {
-            return
-        }
+        if (_isDiscovering.value) return
         
         try {
             _isDiscovering.value = true
-            _discoveredServices.value = emptyList() // Clear previous results
-            pendingResolutions.clear() // Clear pending resolutions
+            _discoveredServices.value = emptyList()
+            pendingResolutions.clear()
             
             // Start discovery for multiple service types
             currentServiceTypeIndex = 0
@@ -90,11 +97,30 @@ class NetworkDiscoveryManager @Inject constructor(
             val serviceType = serviceTypes[currentServiceTypeIndex]
             
             discoveryListener = createDiscoveryListener(serviceType)
-            nsdManager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
+            try {
+                nsdManager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
+            } catch (e: Exception) {
+                // Silent failure
+            }
             
             currentServiceTypeIndex++
+            
+            // Schedule next service type discovery only if no devices found yet
+            coroutineScope.launch {
+                delay(3000) // Wait 3 seconds for current service type
+                if (currentServiceTypeIndex < serviceTypes.size && _discoveredServices.value.isEmpty()) {
+                    startDiscoveryForCurrentType()
+                } else if (_discoveredServices.value.isNotEmpty()) {
+                    _isDiscovering.value = false
+                } else {
+                    _isDiscovering.value = false
+                }
+            }
+        } else {
+            _isDiscovering.value = false
         }
     }
+
     
     /**
      * Stop discovering services
@@ -107,7 +133,7 @@ class NetworkDiscoveryManager @Inject constructor(
             }
             _isDiscovering.value = false
         } catch (e: Exception) {
-            // Silently handle stop errors
+            _isDiscovering.value = false
         }
     }
     
@@ -117,17 +143,22 @@ class NetworkDiscoveryManager @Inject constructor(
     private fun createDiscoveryListener(serviceType: String): NsdManager.DiscoveryListener {
         return object : NsdManager.DiscoveryListener {
             override fun onServiceFound(serviceInfo: NsdServiceInfo) {
-                // Check if this is a Zenflow service or similar WebSocket service
-                val isZenflowService = serviceInfo.serviceName.contains("zenflow", ignoreCase = true) ||
-                    serviceInfo.serviceName.contains("divinixx", ignoreCase = true) ||
-                    serviceInfo.serviceType.contains("zenflow", ignoreCase = true) ||
-                    serviceInfo.serviceType.contains("http", ignoreCase = true) ||
-                    serviceInfo.serviceType.contains("ws", ignoreCase = true) ||
-                    serviceInfo.port == 8080 ||
-                    serviceInfo.port == 3000 || 
-                    serviceInfo.port == 8000 ||
-                    serviceInfo.port == 9000 ||
-                    serviceInfo.serviceName.contains("server", ignoreCase = true)
+                // Check if this is a Zenflow service - be very specific to avoid false positives
+                val isZenflowService = (
+                    // Must contain zenflow or divinixx in the name
+                    (serviceInfo.serviceName.contains("zenflow", ignoreCase = true) ||
+                     serviceInfo.serviceName.contains("divinixx", ignoreCase = true)) ||
+                    
+                    // OR must be a zenflow-specific service type
+                    serviceInfo.serviceType.contains("zenflow", ignoreCase = true)
+                ) && 
+                // AND must NOT be network equipment
+                !serviceInfo.serviceName.contains("grandstream", ignoreCase = true) &&
+                !serviceInfo.serviceName.contains("web management", ignoreCase = true) &&
+                !serviceInfo.serviceName.contains("router", ignoreCase = true) &&
+                !serviceInfo.serviceName.contains("access point", ignoreCase = true) &&
+                !serviceInfo.serviceName.contains("wifi", ignoreCase = true) &&
+                !serviceInfo.serviceName.contains("GWN", ignoreCase = true)
                 
                 if (isZenflowService) {
                     // Add unresolved service to list first
@@ -161,7 +192,10 @@ class NetworkDiscoveryManager @Inject constructor(
             }
             
             override fun onDiscoveryStopped(serviceType: String) {
-                _isDiscovering.value = false
+                // Only set to false if we have found services or all types are exhausted
+                if (_discoveredServices.value.isNotEmpty() || currentServiceTypeIndex >= serviceTypes.size) {
+                    _isDiscovering.value = false
+                }
             }
             
             override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
@@ -196,6 +230,11 @@ class NetworkDiscoveryManager @Inject constructor(
                     )
                     
                     addOrUpdateService(resolved)
+                    
+                    // Stop discovery after finding the first resolved service
+                    if (_discoveredServices.value.any { it.isResolved }) {
+                        stopDiscovery()
+                    }
                 }
                 
                 pendingResolutions.remove(serviceInfo.serviceName)
@@ -250,35 +289,5 @@ class NetworkDiscoveryManager @Inject constructor(
         } else {
             ""
         }
-    }
-    
-    /**
-     * Add a test service for debugging purposes
-     * This can be used when the actual NSD discovery isn't working
-     */
-    fun addTestService(deviceName: String = "Test-Zenflow-PC", ipAddress: String = "192.168.1.100", port: Int = 8080) {
-        val testService = DiscoveredService(
-            deviceName = deviceName,
-            ipAddress = ipAddress,
-            port = port,
-            isResolved = true
-        )
-        addOrUpdateService(testService)
-    }
-    
-    /**
-     * Get current discovery status
-     */
-    fun getDiscoveryStatus(): String {
-        return """
-            Discovery Status:
-            - Is Discovering: ${_isDiscovering.value}
-            - Services Found: ${_discoveredServices.value.size}
-            - Pending Resolutions: ${pendingResolutions.size}
-            - Service Types: ${serviceTypes.joinToString(", ")}
-            
-            Found Services:
-            ${_discoveredServices.value.joinToString("\n") { "  - ${it.deviceName}: ${it.ipAddress}:${it.port} (resolved: ${it.isResolved})" }}
-        """.trimIndent()
     }
 }
