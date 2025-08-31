@@ -7,14 +7,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -22,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.divinixx.zenflow.ui.navigation.ZenFlowDestinations
 import com.divinixx.zenflow.ui.components.keyboard.SystemKeyboardView
 import com.divinixx.zenflow.ui.components.keyboard.VirtualKeyboardListener
 import com.divinixx.zenflow.ui.viewmodel.TouchpadViewModel
@@ -37,10 +41,6 @@ fun KeyboardScreen(
 ) {
     // Single UI state collection for optimal performance
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    // Local state for UI controls
-    var showSettings by remember { mutableStateOf(false) }
-    var showLogs by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -60,8 +60,6 @@ fun KeyboardScreen(
         KeyboardHeader(
             isConnected = uiState.isConnected,
             connectionState = uiState.connectionState,
-            onShowSettings = { showSettings = true },
-            onShowLogs = { showLogs = true },
             modifier = Modifier.padding(16.dp)
         )
 
@@ -81,36 +79,19 @@ fun KeyboardScreen(
             } else {
                 DisconnectedContent(
                     onNavigateToConnection = {
-                        navController.navigate("connection")
+                        navController.navigate(ZenFlowDestinations.HOME)
                     }
                 )
             }
         }
     }
 
-    // Settings Bottom Sheet
-    if (showSettings) {
-        KeyboardSettingsSheet(
-            onDismiss = { showSettings = false }
-        )
-    }
-
-    // Logs Bottom Sheet
-    if (showLogs) {
-        LogsBottomSheet(
-            logs = uiState.logMessages,
-            onDismiss = { showLogs = false },
-            onClearLogs = viewModel::clearLogs
-        )
-    }
 }
 
 @Composable
 private fun KeyboardHeader(
     isConnected: Boolean,
     connectionState: String,
-    onShowSettings: () -> Unit,
-    onShowLogs: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -123,7 +104,7 @@ private fun KeyboardHeader(
                 text = "Virtual Keyboard",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Row(
@@ -133,33 +114,13 @@ private fun KeyboardHeader(
                 Icon(
                     imageVector = if (isConnected) Icons.Default.CheckCircle else Icons.Default.Error,
                     contentDescription = "Connection Status",
-                    tint = if (isConnected) Color.Green else Color.Red,
+                    tint = if (isConnected) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
                     text = connectionState,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (isConnected) Color.Green else Color.Red
-                )
-            }
-        }
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            IconButton(onClick = onShowLogs) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.List,
-                    contentDescription = "Show Logs",
-                    tint = Color.White
-                )
-            }
-
-            IconButton(onClick = onShowSettings) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "Settings",
-                    tint = Color.White
+                    color = if (isConnected) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
                 )
             }
         }
@@ -170,6 +131,8 @@ private fun KeyboardHeader(
 private fun ConnectedKeyboardContent(
     viewModel: TouchpadViewModel
 ) {
+    var selectedCarousel by remember { mutableStateOf<String?>(null) }
+    
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -201,14 +164,12 @@ private fun ConnectedKeyboardContent(
             viewModel = viewModel
         )
 
-        // Media Controls Section
-        MediaControlsSection(viewModel = viewModel)
-
-        // Special Keys Section
-        SpecialKeysSection(viewModel = viewModel)
-
-        // Quick Shortcuts Section
-        QuickShortcutsSection(viewModel = viewModel)
+        // Carousels Section
+        KeyboardCarouselsSection(
+            viewModel = viewModel,
+            selectedCarousel = selectedCarousel,
+            onCarouselSelected = { selectedCarousel = it }
+        )
     }
 }
 
@@ -225,7 +186,7 @@ private fun DisconnectedContent(
             imageVector = Icons.Default.Keyboard,
             contentDescription = "Keyboard",
             modifier = Modifier.size(64.dp),
-            tint = Color.Gray
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -233,7 +194,7 @@ private fun DisconnectedContent(
         Text(
             text = "Connect to PC to use keyboard",
             style = MaterialTheme.typography.headlineSmall,
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
 
@@ -242,63 +203,27 @@ private fun DisconnectedContent(
         Button(
             onClick = onNavigateToConnection,
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF2196F3)
-            )
+                containerColor = MaterialTheme.colorScheme.primary
+            ),
+            modifier = Modifier
+                .height(56.dp)
+                .padding(horizontal = 32.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Link,
                 contentDescription = "Connect",
-                modifier = Modifier.padding(end = 8.dp)
+                modifier = Modifier
+                    .padding(end = 12.dp)
+                    .size(24.dp)
             )
-            Text("Go to Connection")
+            Text(
+                text = "Go to Connection",
+                style = MaterialTheme.typography.labelLarge
+            )
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun KeyboardSettingsSheet(
-    onDismiss: () -> Unit
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = Color(0xFF2d2d2d)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            Text(
-                text = "Keyboard Settings",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            Text(
-                text = "System Keyboard Integration",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            Text(
-                text = "• Use the text input field to open your device's keyboard\n" +
-                        "• Type normally and tap 'Send Text' to send to PC\n" +
-                        "• Use shortcut buttons for common key combinations\n" +
-                        "• Special keys are available for navigation and functions",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.LightGray,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-    }
-}
 @Composable
 private fun ResponsiveKeyboardButton(
     icon: ImageVector,
@@ -348,32 +273,35 @@ private fun ResponsiveKeyboardButton(
         Box(
             modifier = Modifier
                 .background(
-                    if (isPressed) Color(0xFF5d5d5d) else Color(0xFF3d3d3d),
+                    if (isPressed) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                    else MaterialTheme.colorScheme.surfaceContainer,
                     shape = androidx.compose.foundation.shape.CircleShape
                 )
-                .size(48.dp),
+                .size(56.dp),
             contentAlignment = Alignment.Center
         ) {
             IconButton(
                 onClick = { /* Handled by interaction source */ },
                 interactionSource = interactionSource,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(56.dp)
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = label,
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
+                    tint = if (isPressed) MaterialTheme.colorScheme.onPrimary 
+                          else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(28.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = if (isPressed) Color.White else Color.Gray
+            style = MaterialTheme.typography.labelMedium,
+            color = if (isPressed) MaterialTheme.colorScheme.primary 
+                   else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -411,129 +339,59 @@ private fun SimpleKeyboardButton(
         Box(
             modifier = Modifier
                 .background(
-                    if (isPressed) Color(0xFF5d5d5d) else Color(0xFF3d3d3d),
+                    if (isPressed) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                    else MaterialTheme.colorScheme.surfaceContainer,
                     shape = androidx.compose.foundation.shape.CircleShape
                 )
-                .size(48.dp),
+                .size(56.dp),
             contentAlignment = Alignment.Center
         ) {
             IconButton(
                 onClick = { /* Handled by interaction source */ },
                 interactionSource = interactionSource,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(56.dp)
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = label,
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
+                    tint = if (isPressed) MaterialTheme.colorScheme.onPrimary 
+                          else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(28.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = if (isPressed) Color.White else Color.Gray
+            style = MaterialTheme.typography.labelMedium,
+            color = if (isPressed) MaterialTheme.colorScheme.primary 
+                   else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
 
 @Composable
-private fun MediaControlsSection(
+fun SpecialKeysContent(
     viewModel: TouchpadViewModel
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2d2d2d)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "Media Controls",
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-
-            // Volume Controls (Press and hold)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                ResponsiveKeyboardButton(
-                    icon = Icons.AutoMirrored.Filled.VolumeDown,
-                    label = "Vol-",
-                    onStartAction = { viewModel.startVolumeDown() },
-                    onStopAction = { viewModel.stopVolumeDown() },
-                    onSingleTap = { viewModel.sendKeyCombo("volume_down") }
-                )
-
-                SimpleKeyboardButton(
-                    icon = Icons.AutoMirrored.Filled.VolumeOff,
-                    label = "Mute",
-                    onClick = { viewModel.mediaMute() }
-                )
-
-                ResponsiveKeyboardButton(
-                    icon = Icons.AutoMirrored.Filled.VolumeUp,
-                    label = "Vol+",
-                    onStartAction = { viewModel.startVolumeUp() },
-                    onStopAction = { viewModel.stopVolumeUp() },
-                    onSingleTap = { viewModel.sendKeyCombo("volume_up") }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Playback Controls (Single tap)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                SimpleKeyboardButton(
-                    icon = Icons.Default.SkipPrevious,
-                    label = "Previous",
-                    onClick = { viewModel.mediaPrevious() }
-                )
-
-                SimpleKeyboardButton(
-                    icon = Icons.Default.PlayArrow,
-                    label = "Play/Pause",
-                    onClick = { viewModel.mediaPlayPause() }
-                )
-
-                SimpleKeyboardButton(
-                    icon = Icons.Default.SkipNext,
-                    label = "Next",
-                    onClick = { viewModel.mediaNext() }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SpecialKeysSection(
-    viewModel: TouchpadViewModel
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2d2d2d)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
                 text = "Special Keys",
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
-                modifier = Modifier.padding(bottom = 12.dp)
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             // Navigation Keys
@@ -573,8 +431,6 @@ private fun SpecialKeysSection(
                     onSingleTap = { viewModel.sendKeyboardInput("END", "press") }
                 )
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
 
             // Function Keys
             Row(
@@ -618,22 +474,25 @@ private fun SpecialKeysSection(
 }
 
 @Composable
-private fun QuickShortcutsSection(
+ fun QuickShortcutsSection(
     viewModel: TouchpadViewModel
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2d2d2d)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
                 text = "Quick Shortcuts",
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
-                modifier = Modifier.padding(bottom = 12.dp)
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             // First row - Basic shortcuts
@@ -644,9 +503,7 @@ private fun QuickShortcutsSection(
                 ResponsiveKeyboardButton(
                     icon = Icons.Default.ContentCopy,
                     label = "Copy",
-                    onStartAction = { viewModel.
-
-                    startShortcutRepeat("ctrl+c") },
+                    onStartAction = { viewModel.startShortcutRepeat("ctrl+c") },
                     onStopAction = { viewModel.stopKeyRepeat() },
                     onSingleTap = { viewModel.sendKeyCombo("ctrl+c") }
                 )
@@ -675,8 +532,6 @@ private fun QuickShortcutsSection(
                     onSingleTap = { viewModel.sendKeyCombo("ctrl+y") }
                 )
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
 
             // Second row - System shortcuts
             Row(
@@ -719,66 +574,229 @@ private fun QuickShortcutsSection(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LogsBottomSheet(
-    logs: List<String>,
-    onDismiss: () -> Unit,
-    onClearLogs: () -> Unit
+private fun KeyboardCarouselsSection(
+    viewModel: TouchpadViewModel,
+    selectedCarousel: String?,
+    onCarouselSelected: (String?) -> Unit
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = Color(0xFF2d2d2d)
+    Column(
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column(
+        Text(
+            text = "Control Panels",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
+        
+        // Horizontal carousel of control categories
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(400.dp)
-                .padding(16.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Keyboard Logs",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-
-                TextButton(onClick = onClearLogs) {
-                    Text("Clear", color = Color.Red)
+            Spacer(modifier = Modifier.width(4.dp))
+            
+            CarouselCard(
+                title = "Media Controls",
+                icon = Icons.Default.PlayArrow,
+                isSelected = selectedCarousel == "media",
+                onClick = { 
+                    onCarouselSelected(if (selectedCarousel == "media") null else "media")
                 }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-            ) {
-                logs.forEach { log ->
-                    Text(
-                        text = log,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.LightGray,
-                        modifier = Modifier.padding(vertical = 2.dp)
-                    )
+            )
+            
+            CarouselCard(
+                title = "Special Keys",
+                icon = Icons.Default.Keyboard,
+                isSelected = selectedCarousel == "special",
+                onClick = { 
+                    onCarouselSelected(if (selectedCarousel == "special") null else "special")
                 }
-
-                if (logs.isEmpty()) {
-                    Text(
-                        text = "No logs available",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+            )
+            
+            CarouselCard(
+                title = "Quick Shortcuts",
+                icon = Icons.Default.Speed,
+                isSelected = selectedCarousel == "shortcuts",
+                onClick = { 
+                    onCarouselSelected(if (selectedCarousel == "shortcuts") null else "shortcuts")
                 }
+            )
+            
+            Spacer(modifier = Modifier.width(4.dp))
+        }
+        
+        // Expanded content based on selection
+        selectedCarousel?.let { carousel ->
+            when (carousel) {
+                "media" -> MediaControlsContent(viewModel = viewModel)
+                "special" -> SpecialKeysContent(viewModel = viewModel)
+                "shortcuts" -> QuickShortcutsSection(viewModel = viewModel)
             }
         }
     }
 }
+
+
+@Composable
+private fun CarouselCard(
+    title: String,
+    icon: ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .width(140.dp)
+            .height(100.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                if (isSelected) 
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                else 
+                    MaterialTheme.colorScheme.surfaceContainer
+            )
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                modifier = Modifier.size(32.dp),
+                tint = if (isSelected) 
+                    MaterialTheme.colorScheme.onPrimary
+                else 
+                    MaterialTheme.colorScheme.onSurface
+            )
+            
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                color = if (isSelected) 
+                    MaterialTheme.colorScheme.onPrimary
+                else 
+                    MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                maxLines = 2
+            )
+        }
+    }
+}
+
+@Composable
+private fun MediaControlsContent(
+    viewModel: TouchpadViewModel
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "Media Controls",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            // Volume Controls (Press and hold)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                ResponsiveKeyboardButton(
+                    icon = Icons.AutoMirrored.Filled.VolumeDown,
+                    label = "Vol-",
+                    onStartAction = { viewModel.startVolumeDown() },
+                    onStopAction = { viewModel.stopVolumeDown() },
+                    onSingleTap = { viewModel.sendKeyCombo("volume_down") }
+                )
+
+                SimpleKeyboardButton(
+                    icon = Icons.AutoMirrored.Filled.VolumeOff,
+                    label = "Mute",
+                    onClick = { viewModel.mediaMute() }
+                )
+
+                ResponsiveKeyboardButton(
+                    icon = Icons.AutoMirrored.Filled.VolumeUp,
+                    label = "Vol+",
+                    onStartAction = { viewModel.startVolumeUp() },
+                    onStopAction = { viewModel.stopVolumeUp() },
+                    onSingleTap = { viewModel.sendKeyCombo("volume_up") }
+                )
+            }
+
+            // Playback Controls (Single tap)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                SimpleKeyboardButton(
+                    icon = Icons.Default.SkipPrevious,
+                    label = "Previous",
+                    onClick = { viewModel.mediaPrevious() }
+                )
+
+                SimpleKeyboardButton(
+                    icon = Icons.Default.PlayArrow,
+                    label = "Play/Pause",
+                    onClick = { viewModel.mediaPlayPause() }
+                )
+
+                SimpleKeyboardButton(
+                    icon = Icons.Default.SkipNext,
+                    label = "Next",
+                    onClick = { viewModel.mediaNext() }
+                )
+            }
+
+            // Video Navigation Controls (Left/Right arrows for seeking)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                ResponsiveKeyboardButton(
+                    icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    label = "Seek Back",
+                    onStartAction = { viewModel.startKeyRepeat("LEFT") },
+                    onStopAction = { viewModel.stopKeyRepeat() },
+                    onSingleTap = { viewModel.sendKeyboardInput("LEFT", "press") }
+                )
+
+                SimpleKeyboardButton(
+                    icon = Icons.Default.Fullscreen,
+                    label = "Fullscreen",
+                    onClick = { viewModel.sendKeyboardInput("F11", "press") }
+                )
+
+                ResponsiveKeyboardButton(
+                    icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    label = "Seek Forward",
+                    onStartAction = { viewModel.startKeyRepeat("RIGHT") },
+                    onStopAction = { viewModel.stopKeyRepeat() },
+                    onSingleTap = { viewModel.sendKeyboardInput("RIGHT", "press") }
+                )
+            }
+        }
+    }
+}
+
+
+
+
+

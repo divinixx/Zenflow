@@ -47,25 +47,28 @@ fun SystemKeyboardView(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Color(0xFF1a1a1a))
+            .background(MaterialTheme.colorScheme.surface)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Text Input Section
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF2d2d2d)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            shape = RoundedCornerShape(16.dp)
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
                     text = "Text Input",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 
                 OutlinedTextField(
@@ -82,10 +85,24 @@ fun SystemKeyboardView(
                         }
                         textInput = newValue
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Type here (auto-sends to PC)") },
-                    placeholder = { Text("Start typing...") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    label = { 
+                        Text(
+                            "Type here",
+                            style = MaterialTheme.typography.bodyMedium
+                        ) 
+                    },
+                    placeholder = { 
+                        Text(
+                            "Start typing...",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        ) 
+                    },
                     enabled = isConnected,
+                    maxLines = 3,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Text,
                         imeAction = ImeAction.Done
@@ -97,17 +114,21 @@ fun SystemKeyboardView(
                         }
                     ),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.Cyan,
-                        focusedLabelColor = Color.Cyan,
-                        cursorColor = Color.Cyan
-                    )
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    shape = RoundedCornerShape(12.dp)
                 )
                 
-                // Backspace Button
+                // Action Buttons Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // Backspace Button
                     ResponsiveBackspaceButton(
                         onStartPress = { 
                             viewModel?.startBackspaceRepeat()
@@ -127,24 +148,51 @@ fun SystemKeyboardView(
                         isConnected = isConnected,
                         modifier = Modifier.weight(1f)
                     )
-                }
-                
-                // Clear button (still useful for clearing the input field)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    OutlinedButton(
+                    
+                    // Clear Button
+                    FilledTonalButton(
                         onClick = { textInput = "" },
                         enabled = textInput.isNotEmpty(),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color.LightGray
-                        )
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(Icons.Default.Clear, contentDescription = "Clear", modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Clear", style = MaterialTheme.typography.bodySmall)
+                        Icon(
+                            Icons.Default.Clear, 
+                            contentDescription = "Clear",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Clear",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
+                }
+                
+                // Status Indicator
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = if (isConnected) Icons.Default.CheckCircle else Icons.Default.Cancel,
+                        contentDescription = null,
+                        tint = if (isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (isConnected) "Connected - Type to send" else "Disconnected",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
         }
@@ -262,28 +310,35 @@ private fun ResponsiveBackspaceButton(
         }
     }
     
-    Button(
+    FilledTonalButton(
         onClick = { /* Handled by interaction source */ },
         enabled = isConnected,
         modifier = modifier,
         interactionSource = interactionSource,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (isPressed) Color(0xFF6a6a6a) else Color(0xFF4a4a4a),
-            disabledContainerColor = Color(0xFF2a2a2a)
+        colors = ButtonDefaults.filledTonalButtonColors(
+            containerColor = if (isPressed) 
+                MaterialTheme.colorScheme.primaryContainer 
+            else 
+                MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = if (isPressed)
+                MaterialTheme.colorScheme.onPrimaryContainer
+            else
+                MaterialTheme.colorScheme.onTertiaryContainer,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
         ),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         Icon(
             imageVector = Icons.AutoMirrored.Filled.Backspace,
             contentDescription = "Backspace",
-            modifier = Modifier.size(20.dp),
-            tint = Color.White
+            modifier = Modifier.size(18.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = "Backspace",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.White
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Medium
         )
     }
 }

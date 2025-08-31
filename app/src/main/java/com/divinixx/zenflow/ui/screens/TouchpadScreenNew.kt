@@ -4,39 +4,29 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import kotlinx.coroutines.delay
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
+import com.divinixx.zenflow.ui.navigation.ZenFlowDestinations
 import com.divinixx.zenflow.ui.components.touchpad.TouchpadView
 import com.divinixx.zenflow.ui.theme.ZenFlowTheme
 import com.divinixx.zenflow.ui.viewmodel.TouchpadViewModel
 
-/**
- * Professional TouchpadScreen with error-free ViewModel integration
- * Uses single UI state for optimal performance
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TouchpadScreen(
@@ -48,7 +38,6 @@ fun TouchpadScreen(
 
     // Local state for UI controls
     var showSettings by remember { mutableStateOf(false) }
-    var showLogs by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -70,8 +59,7 @@ fun TouchpadScreen(
         TouchpadHeader(
             isConnected = uiState.isConnected,
             connectionState = uiState.connectionState,
-            onShowSettings = { showSettings = true },
-            onShowLogs = { showLogs = true }
+            onShowSettings = { showSettings = true }
         )
 
         // Main Content based on connection state
@@ -83,7 +71,7 @@ fun TouchpadScreen(
         } else {
             DisconnectedContent(
                 onNavigateToConnection = {
-                    navController.navigate("connection")
+                    navController.navigate(ZenFlowDestinations.HOME)
                 }
             )
         }
@@ -94,20 +82,7 @@ fun TouchpadScreen(
         TouchpadSettingsSheet(
             settings = uiState.touchpadSettings,
             onDismiss = { showSettings = false },
-            onUpdateSensitivity = viewModel::updateSensitivity,
-            onToggleScrolling = viewModel::toggleScrolling,
-            onToggleRightClick = viewModel::toggleRightClick,
-            onToggleDoubleClick = viewModel::toggleDoubleClick,
-            onToggleLeftHanded = viewModel::toggleLeftHanded
-        )
-    }
-
-    // Logs Bottom Sheet
-    if (showLogs) {
-        LogsBottomSheet(
-            logs = uiState.logMessages,
-            onDismiss = { showLogs = false },
-            onClearLogs = viewModel::clearLogs
+            onUpdateSensitivity = viewModel::updateSensitivity
         )
     }
 }
@@ -116,8 +91,7 @@ fun TouchpadScreen(
 private fun TouchpadHeader(
     isConnected: Boolean,
     connectionState: String,
-    onShowSettings: () -> Unit,
-    onShowLogs: () -> Unit
+    onShowSettings: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -129,7 +103,7 @@ private fun TouchpadHeader(
                 text = "Touchpad Control",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Row(
@@ -139,35 +113,23 @@ private fun TouchpadHeader(
                 Icon(
                     imageVector = if (isConnected) Icons.Default.CheckCircle else Icons.Default.Error,
                     contentDescription = "Connection Status",
-                    tint = if (isConnected) Color.Green else Color.Red,
+                    tint = if (isConnected) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
                     text = connectionState,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (isConnected) Color.Green else Color.Red
+                    color = if (isConnected) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
                 )
             }
         }
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            IconButton(onClick = onShowLogs) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.List,
-                    contentDescription = "Show Logs",
-                    tint = Color.White
-                )
-            }
-
-            IconButton(onClick = onShowSettings) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "Settings",
-                    tint = Color.White
-                )
-            }
+        IconButton(onClick = onShowSettings) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Settings",
+                tint = MaterialTheme.colorScheme.onBackground
+            )
         }
     }
 }
@@ -187,7 +149,7 @@ private fun ConnectedContent(
                 .fillMaxWidth()
                 .weight(1f),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFF2d2d2d)
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
@@ -216,8 +178,6 @@ private fun ConnectedContent(
         // Quick Actions
         QuickActionsRow(viewModel = viewModel)
 
-        // Status Bar
-        TouchpadStatusBar(settings = settings)
     }
 }
 
@@ -234,7 +194,7 @@ private fun DisconnectedContent(
             imageVector = Icons.Default.Tablet,
             contentDescription = "Touchpad",
             modifier = Modifier.size(64.dp),
-            tint = Color.Gray
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -242,7 +202,7 @@ private fun DisconnectedContent(
         Text(
             text = "Connect to PC to use touchpad",
             style = MaterialTheme.typography.headlineSmall,
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
 
@@ -251,15 +211,23 @@ private fun DisconnectedContent(
         Button(
             onClick = onNavigateToConnection,
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF2196F3)
-            )
+                containerColor = MaterialTheme.colorScheme.primary
+            ),
+            modifier = Modifier
+                .height(56.dp)
+                .padding(horizontal = 32.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Settings,
                 contentDescription = "Connect",
-                modifier = Modifier.padding(end = 8.dp)
+                modifier = Modifier
+                    .padding(end = 12.dp)
+                    .size(24.dp)
             )
-            Text("Go to Connection")
+            Text(
+                text = "Go to Connection",
+                style = MaterialTheme.typography.labelLarge
+            )
         }
     }
 }
@@ -304,38 +272,7 @@ private fun QuickActionsRow(
     }
 }
 
-@Composable
-private fun QuickActionButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        IconButton(
-            onClick = onClick,
-            modifier = Modifier
-                .background(
-                    Color(0xFF3d3d3d),
-                    shape = androidx.compose.foundation.shape.CircleShape
-                )
-                .size(48.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = Color.White
-            )
-        }
 
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray
-        )
-    }
-}
 
 @Composable
 private fun ResponsiveActionButton(
@@ -373,32 +310,35 @@ private fun ResponsiveActionButton(
         Box(
             modifier = Modifier
                 .background(
-                    if (isPressed) Color(0xFF5d5d5d) else Color(0xFF3d3d3d),
+                    if (isPressed) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) 
+                    else MaterialTheme.colorScheme.surfaceContainer,
                     shape = androidx.compose.foundation.shape.CircleShape
                 )
-                .size(48.dp),
+                .size(64.dp),
             contentAlignment = Alignment.Center
         ) {
             IconButton(
                 onClick = { /* Handled by interaction source */ },
                 interactionSource = interactionSource,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(64.dp)
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = label,
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
+                    tint = if (isPressed) MaterialTheme.colorScheme.onPrimary 
+                          else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(32.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = if (isPressed) Color.White else Color.Gray
+            style = MaterialTheme.typography.labelMedium,
+            color = if (isPressed) MaterialTheme.colorScheme.primary 
+                   else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -410,7 +350,7 @@ private fun TouchpadStatusBar(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF2d2d2d)
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -422,9 +362,6 @@ private fun TouchpadStatusBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             StatusItem("Sensitivity", "${(settings.sensitivity * 100).toInt()}%")
-            StatusItem("Scroll", if (settings.enableScrolling) "ON" else "OFF")
-            StatusItem("Right Click", if (settings.enableRightClick) "ON" else "OFF")
-            StatusItem("Mode", if (settings.leftHandedMode) "Left" else "Right")
         }
     }
 }
@@ -441,12 +378,12 @@ private fun StatusItem(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
-            color = Color.Cyan
+            color = MaterialTheme.colorScheme.primary
         )
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -456,15 +393,11 @@ private fun StatusItem(
 private fun TouchpadSettingsSheet(
     settings: com.divinixx.zenflow.ui.viewmodel.TouchpadSettings,
     onDismiss: () -> Unit,
-    onUpdateSensitivity: (Float) -> Unit,
-    onToggleScrolling: (Boolean) -> Unit,
-    onToggleRightClick: (Boolean) -> Unit,
-    onToggleDoubleClick: (Boolean) -> Unit,
-    onToggleLeftHanded: (Boolean) -> Unit
+    onUpdateSensitivity: (Float) -> Unit
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF2d2d2d)
+        containerColor = MaterialTheme.colorScheme.surfaceContainer
     ) {
         Column(
             modifier = Modifier
@@ -476,14 +409,14 @@ private fun TouchpadSettingsSheet(
                 text = "Touchpad Settings",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
             // Sensitivity Slider
             Text(
                 text = "Sensitivity: ${(settings.sensitivity * 100).toInt()}%",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyMedium
             )
             Slider(
@@ -493,134 +426,13 @@ private fun TouchpadSettingsSheet(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            // Toggle Settings
-            SettingToggle(
-                title = "Enable Scrolling",
-                checked = settings.enableScrolling,
-                onCheckedChange = onToggleScrolling
-            )
-
-            SettingToggle(
-                title = "Enable Right Click",
-                checked = settings.enableRightClick,
-                onCheckedChange = onToggleRightClick
-            )
-
-            SettingToggle(
-                title = "Enable Double Click",
-                checked = settings.enableDoubleClick,
-                onCheckedChange = onToggleDoubleClick
-            )
-
-            SettingToggle(
-                title = "Left-handed Mode",
-                checked = settings.leftHandedMode,
-                onCheckedChange = onToggleLeftHanded
-            )
-
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
 
-@Composable
-private fun SettingToggle(
-    title: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = title,
-            color = Color.White,
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange
-        )
-    }
-}
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun LogsBottomSheet(
-    logs: List<String>,
-    onDismiss: () -> Unit,
-    onClearLogs: () -> Unit
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = Color(0xFF2d2d2d)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(400.dp)
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Touchpad Logs",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
 
-                TextButton(onClick = onClearLogs) {
-                    Text("Clear", color = Color.Red)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-            ) {
-                logs.forEach { log ->
-                    Text(
-                        text = log,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.LightGray,
-                        modifier = Modifier.padding(vertical = 2.dp)
-                    )
-                }
-
-                if (logs.isEmpty()) {
-                    Text(
-                        text = "No logs available",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Preview(showBackground = true, backgroundColor = 0xFF1a1a1a)
-@Composable
-private fun TouchpadScreenConnectedPreview() {
-    ZenFlowTheme {
-        TouchpadScreen(
-            navController = rememberNavController()
-        )
-    }
-}
 
 @Preview(showBackground = true, backgroundColor = 0xFF1a1a1a)
 @Composable

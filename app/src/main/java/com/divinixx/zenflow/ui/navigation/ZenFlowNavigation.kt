@@ -23,9 +23,6 @@ import com.divinixx.zenflow.ui.screens.HomeScreen
 import com.divinixx.zenflow.ui.screens.KeyboardScreen
 import com.divinixx.zenflow.ui.screens.TouchpadScreen
 
-/**
- * Navigation destinations for ZenFlow Remote app
- */
 object ZenFlowDestinations {
     const val HOME = "home"
     const val TOUCHPAD = "touchpad"
@@ -87,7 +84,7 @@ private fun ZenFlowBottomBar(
     val currentDestination = navBackStackEntry?.destination
 
     NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = MaterialTheme.colorScheme.onSurface
     ) {
         NavigationBarItem(

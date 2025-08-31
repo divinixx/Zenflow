@@ -13,7 +13,7 @@ val PoppinsFamily = FontFamily(
     Font(R.font.poppins_regular, FontWeight.Normal),
     Font(R.font.poppins_regular, FontWeight.Medium),
     Font(R.font.poppins_regular, FontWeight.SemiBold),
-    Font(R.font.poppins_regular, FontWeight.Bold)
+    Font(R.font.poppins_bold, FontWeight.Bold)
 )
 
 val InterFamily = FontFamily(
